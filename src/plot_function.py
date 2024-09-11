@@ -85,11 +85,7 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
         total_count = grouped['Count'].sum()
         grouped['Percentage'] = (grouped['Count'] / total_count) * 100
 
-        if len(df[item].unique()) >= 5:
-            plt.figure(figsize=(16, 6))
-        else:
-            plt.figure(figsize=(10, 6))
-        
+   
         g = sns.catplot(
             data=grouped, kind=plot_type,
             x=item, y="Count", hue=hue,
