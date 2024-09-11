@@ -68,7 +68,6 @@ def plot_seaborn_bar(df, custom_palette, hue):
     plt.tight_layout()
     
     
-    
 def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
     """
     Plots stacked bar charts (or other specified types) for categorical variables.
@@ -86,7 +85,11 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
         total_count = grouped['Count'].sum()
         grouped['Percentage'] = (grouped['Count'] / total_count) * 100
 
-
+        if len(df[item].unique()) >= 5:
+            plt.figure(figsize=(16, 6))
+        else:
+            plt.figure(figsize=(10, 6))
+        
         g = sns.catplot(
             data=grouped, kind=plot_type,
             x=item, y="Count", hue=hue,
@@ -96,10 +99,6 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
 
 
         plt.title(f'% {hue} or Not by {item}', fontsize=16, weight='bold', pad=20)
-        # g.set_axis_labels(item, "Count of People")
-
-
-        # g.ax.grid(True, which='both', linestyle='--', linewidth=0.5)
 
 
         for p in g.ax.patches:
@@ -129,7 +128,8 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
 
         plt.tight_layout()
 
-def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, label_fontsize=14, show_grid=False):
+
+def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, label_fontsize=14):
     """
     Plots a customized scatter plot with specified x and y axes, hue for color coding, and custom palette.
 
@@ -149,7 +149,7 @@ def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, la
     sns.scatterplot(data=df, x=x, y=y, hue=hue, palette=custom_palette, alpha=0.6)
 
     # Add title and labels
-    plt.title(f'Scatter Plot of {x} vs {y}', fontsize=title_fontsize, weight='bold')
+    plt.title(f'{x} vs {y}', fontsize=title_fontsize, weight='bold')
     plt.xlabel(x, fontsize=label_fontsize)
     plt.ylabel(y, fontsize=label_fontsize)
 
@@ -160,25 +160,17 @@ def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, la
     ax.spines['top'].set_visible(False)  # Hide the top spine
     ax.spines['right'].set_visible(False)  # Hide the right spine
     ax.spines['left'].set_visible(False)  # Hide the left spine
-    ax.spines['bottom'].set_visible(True)  # Optionally show the bottom spine
+    ax.spines['bottom'].set_visible(False)  # Optionally show the bottom spine
     
-
-    # Conditionally show or hide grid
-    if show_grid:
-        ax.grid(which='both', linestyle='--', linewidth=0.5)  # Show grid with line properties
-    else:
-        ax.grid(False)  # Hide grid
-
     # Customize the legend
     legend = ax.get_legend()
     if legend:
         legend.set_title(hue)  # Set the legend title
         legend.set_bbox_to_anchor((1.15, 0.8))  # Adjust legend position
 
-    plt.tight_layout()  # Adjust layout to prevent overlap
+    # plt.tight_layout()  # Adjust layout to prevent overlap
     
     
-
 def plot_custom_histograms(df, custom_palette, items, hue_choice):
     """
     Plots histograms for specified items in the DataFrame, separated by hue.
@@ -188,18 +180,14 @@ def plot_custom_histograms(df, custom_palette, items, hue_choice):
     - custom_palette (dict or list): Color palette for the plot.
     - items (list): List of columns to plot histograms for.
     - hue_choice (str): Column name to use for hue (color coding).
-    - show_grid (bool): Whether to display grid lines. Default is False.
     """
     for item in items:
-        if item not in df.columns:
-            print(f"Warning: Column '{item}' not found in DataFrame.")
-            continue
-
+        
         plt.figure(figsize=(15, 6))
         
         # Create the histogram plot
         g = sns.histplot(data=df, x=item, hue=hue_choice, 
-                         palette=custom_palette, kde=True, multiple='stack')
+                         palette=custom_palette, kde=True)#, kde=True, multiple='stack')
 
         # Add title and labels
         plt.title(f'Histogram of {item} by {hue_choice}', fontsize=16, weight='bold')
@@ -216,11 +204,10 @@ def plot_custom_histograms(df, custom_palette, items, hue_choice):
         ax.spines['right'].set_visible(False)  # Hide the right spine
         ax.spines['left'].set_visible(False)  # Hide the left spine
 
-
-        # Customize the legend using matplotlib
-        legend = ax.get_legend()
-        if legend:
+        # Customize the legend only if it exists
+        if ax.get_legend() is not None:
+            legend = ax.get_legend()
             legend.set_title(hue_choice)  # Set the legend title
             legend.set_bbox_to_anchor((1.15, 0.8))  # Adjust legend position
 
-        plt.tight_layout()  # Adjust layout to prevent overlap
+        # plt.tight_layout()  # Adjust layout to prevent overlap
