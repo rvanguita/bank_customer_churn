@@ -26,13 +26,13 @@ def plot_seaborn_bar(df, custom_palette, hue):
 
     percentage_exited = df[hue].value_counts(normalize=True) * 100
     percentage_df = percentage_exited.reset_index()
-    percentage_df.columns = [hue, 'Percentage']
+    percentage_df.columns = [hue, 'percentage']
 
 
     plt.figure(figsize=(4, 3))
     
 
-    ax = sns.barplot(data=percentage_df, x=hue, y='Percentage', hue=hue, palette=custom_palette)
+    ax = sns.barplot(data=percentage_df, x=hue, y='percentage', hue=hue, palette=custom_palette)
 
 
     ax.set_title(f'{percentage_exited.idxmin()} rate is about {percentage_exited.min():.2f}%', 
@@ -81,7 +81,7 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
         grouped = df.groupby([item, hue]).size().reset_index(name='Count')
 
         total_count = grouped['Count'].sum()
-        grouped['Percentage'] = (grouped['Count'] / total_count) * 100
+        grouped['percentage'] = (grouped['Count'] / total_count) * 100
 
 
         # Define the size based on the number of unique categories in the item column
@@ -120,10 +120,13 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
         g.ax.spines['top'].set_visible(False)  
         g.ax.spines['right'].set_visible(False)  
         g.ax.spines['left'].set_visible(False)  
-        # ax.spines['bottom'].set_visible(False) 
+        g.ax.spines['bottom'].set_visible(False) 
         g.ax.grid(False)  
         
+        g.ax.set_xlabel('')
+        
 
+        g.ax.invert_xaxis()
         g._legend.set_title(hue)  
         g._legend.set_bbox_to_anchor((1.15, .8))  
 
@@ -172,95 +175,68 @@ def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, la
 
     # plt.tight_layout()  # Adjust layout to prevent overlap
     
-    
-def plot_custom_histograms(df, custom_palette, items, hue_choice):
+
+def data_visualizations(df, features, color='#c3e88d', hue=None, boxplot=False, histogram=None,
+                        barplot=None, custom_palette=None, kde=False, figsize=(24, 12)):
     """
-    Plots histograms for specified items in the DataFrame, separated by hue.
+    Plots boxplots and/or histplots for specified items in the DataFrame, optionally separated by hue, in a single figure.
 
     Args:
     - df (pd.DataFrame): DataFrame containing the data.
-    - custom_palette (dict or list): Color palette for the plot.
-    - items (list): List of columns to plot histograms for.
-    - hue_choice (str): Column name to use for hue (color coding).
-    """
-    for item in items:
-        
-        plt.figure(figsize=(15, 6))
-        
-        # Create the histogram plot
-        g = sns.histplot(data=df, x=item, hue=hue_choice, 
-                         palette=custom_palette, kde=True)#, kde=True, multiple='stack')
-
-        # Add title and labels
-        plt.title(f'Histogram of {item} by {hue_choice}', fontsize=16, weight='bold')
-        plt.xlabel(item, fontsize=14)
-        plt.ylabel('Frequency', fontsize=14)
-        
-        # Set x-axis limits
-        plt.xlim([df[item].min(), df[item].max()])
-        
-        # Access the current Axes instance
-        ax = plt.gca()
-        ax.yaxis.set_visible(False)  # Hide y-axis
-        ax.spines['top'].set_visible(False)  # Hide the top spine
-        ax.spines['right'].set_visible(False)  # Hide the right spine
-        ax.spines['left'].set_visible(False)  # Hide the left spine
-
-        # Customize the legend only if it exists
-        if ax.get_legend() is not None:
-            legend = ax.get_legend()
-            legend.set_title(hue_choice)  # Set the legend title
-            legend.set_bbox_to_anchor((1.15, 0.8))  # Adjust legend position
-
-        # plt.tight_layout()  # Adjust layout to prevent overlap
-        
-        
-import matplotlib.pyplot as plt
-import seaborn as sns
-
-def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None, figsize=(24, 12)):
-    """
-    Plots boxplots for specified items in the DataFrame, optionally separated by hue, in a single figure.
-
-    Args:
-    - df (pd.DataFrame): DataFrame containing the data.
-    - items (list): List of columns to plot boxplots for.
-    - hue (str, optional): Column name to separate the boxplots by hue.
+    - items (list): List of columns to plot boxplots or histplots for.
+    - color (str, optional): Color for the boxplot if hue is not used.
+    - hue (str, optional): Column name to separate the boxplots or histplots by hue.
+    - boxplot (bool, optional): If True, plots boxplots.
+    - histplot (bool, optional): If True, plots histograms.
     - custom_palette (dict or list, optional): Color palette for the plot. Used if hue is provided.
+    - figsize (tuple, optional): Figure size.
     """
-    num_items = len(items)
-    rows = (num_items + 2) // 3  # Ajusta o número de linhas dependendo da quantidade de itens
-    cols = min(3, num_items)  # Número de colunas ajusta ao número de itens, máximo de 3 colunas
+    num_features = len(features)
+    if num_features == 0:
+        print("No items to plot.")
+        return
     
-    if hue:
-        fig, axes = plt.subplots(rows, cols, figsize=figsize)  # Cria os subplots
-    else:
-        fig, axes = plt.subplots(rows, cols, figsize=figsize)  # Cria os subplots
-    axes = axes.flatten()  # Flatten para o caso do número de itens ser ímpar
+    rows = (num_features + 2) // 3
+    cols = min(3, num_features)
+    
+    fig, axes = plt.subplots(rows, cols, figsize=figsize)
+    axes = axes.flatten()
 
-    for i, item in enumerate(items):
-        ax = axes[i]  # Seleciona o subplot para o item atual
+    for i, feature in enumerate(features):
+        ax = axes[i]
+         
 
-        if hue:
-            sns.boxplot(data=df, x=item, y=hue, hue=hue, orient='h', palette=custom_palette, ax=ax)
-            # ax.set_ylabel(hue, fontsize=14)
-        else:
-            sns.boxplot(data=df, x=item, color=color, orient='h', ax=ax)
-            # ax.set_ylabel('')
+    
+        if histogram:
+            sns.histplot(data=df, x=feature, hue=hue, palette=custom_palette, kde=kde, ax=ax, stat='proportion')
+            ax.set_xlabel('')
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
             
-        ax.set_xlabel('')
-        ax.set_title(f'{item}', fontsize=16, weight='bold')
-        ax.yaxis.set_visible(False)  # Esconde o eixo y se não estiver usando hue
-        ax.spines['top'].set_visible(False)  # Esconde a borda superior
-        ax.spines['right'].set_visible(False)  # Esconde a borda direita
-        ax.spines['left'].set_visible(False)  # Esconde a borda esquerda
-        ax.spines['bottom'].set_visible(False)  # Esconde a borda inferior
-        ax.grid(False)
+        if boxplot:
+            if hue:
+                sns.boxplot(data=df, x=feature, y=hue, hue=hue, orient='h', palette=custom_palette, ax=ax)
 
-    # Remove gráficos extras vazios
-    for j in range(num_items, len(axes)):
+            else:
+                sns.boxplot(data=df, x=feature, color=color, orient='h', ax=ax)
+            ax.set_xlabel('')
+        
+        
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
+
+    for j in range(num_features, len(axes)):
         fig.delaxes(axes[j])
 
     plt.tight_layout()
     plt.show()
-
