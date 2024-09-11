@@ -24,29 +24,28 @@ def plot_seaborn_bar(df, custom_palette, hue):
     the percentage value.
     """
 
-    # Calcular as porcentagens de churn e não-churn
     percentage_exited = df[hue].value_counts(normalize=True) * 100
     percentage_df = percentage_exited.reset_index()
     percentage_df.columns = [hue, 'Percentage']
 
-    # Criando a figura e o gráfico de barras com seaborn
+
     plt.figure(figsize=(4, 3))
     
-    # Aplicando a paleta personalizada de acordo com os valores de 'hue'
+
     ax = sns.barplot(data=percentage_df, x=hue, y='Percentage', hue=hue, palette=custom_palette)
 
-    # Adicionando título e ajustando o layout
+
     ax.set_title(f'{percentage_exited.idxmin()} rate is about {percentage_exited.min():.2f}%', 
                  fontweight='bold', fontsize=13, pad=15, loc='center')
     ax.set_xlabel('')
     
-    # Inverter o eixo x para uma melhor visualização
+
     ax.invert_xaxis()
 
-    # Remover ticks e labels dos eixos
+
     ax.tick_params(axis='both', which='both', length=0)
     
-    # Esconder eixo y e remover espinhas (borders)
+
     ax.yaxis.set_visible(False)
     ax.spines['top'].set_visible(False)
     ax.spines['right'].set_visible(False)
@@ -54,7 +53,6 @@ def plot_seaborn_bar(df, custom_palette, hue):
     ax.spines['bottom'].set_visible(False)
     ax.grid(False)
     
-    # Adicionando as anotações de porcentagem acima das barras
     for p in ax.patches:
         height = p.get_height()
         ax.annotate(f'{height:.2f}%', 
@@ -64,7 +62,7 @@ def plot_seaborn_bar(df, custom_palette, hue):
                     textcoords='offset points',
                     fontsize=11, color='white', fontweight='bold')
 
-    # Ajustando o layout para evitar cortes
+
     plt.tight_layout()
     
     
@@ -207,3 +205,41 @@ def plot_custom_histograms(df, custom_palette, items, hue_choice):
             legend.set_bbox_to_anchor((1.15, 0.8))  # Adjust legend position
 
         # plt.tight_layout()  # Adjust layout to prevent overlap
+        
+        
+def plot_custom_boxplot(df, items, hue=None, custom_palette=None):
+    """
+    Plots boxplots for specified items in the DataFrame, optionally separated by hue.
+
+    Args:
+    - df (pd.DataFrame): DataFrame containing the data.
+    - items (list): List of columns to plot boxplots for.
+    - hue (str, optional): Column name to separate the boxplots by hue.
+    - custom_palette (dict or list, optional): Color palette for the plot. Used if hue is provided.
+    """
+    for item in items:
+        plt.figure(figsize=(6, 4))
+        
+        if hue:
+            # Use hue if specified
+            g = sns.boxplot(data=df, x=item, y=hue, hue=hue, orient='h', palette=custom_palette)
+            
+            # plt.title(f'Boxplot of {item} by {hue}', fontsize=16, weight='bold')
+            ax = plt.gca()
+            ax.set_ylabel(hue, fontsize=14)
+        else:
+            # No hue specified, so only plot the item
+            g = sns.boxplot(data=df, x=item, orient='h')
+            plt.title(f'Boxplot of {item}', fontsize=16, weight='bold')
+            ax = plt.gca()
+            ax.set_ylabel('')
+        
+        ax.set_xlabel(item, fontsize=14)
+        ax.yaxis.set_visible(False)  # Hide y-axis if not using hue
+        ax.spines['top'].set_visible(False)  # Hide the top spine
+        ax.spines['right'].set_visible(False)  # Hide the right spine
+        ax.spines['left'].set_visible(False)  # Hide the left spine
+        ax.spines['bottom'].set_visible(False)  # Optionally hide the bottom spine
+        ax.grid(False)
+        
+        plt.tight_layout()
