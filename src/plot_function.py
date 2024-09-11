@@ -218,7 +218,7 @@ def plot_custom_histograms(df, custom_palette, items, hue_choice):
 import matplotlib.pyplot as plt
 import seaborn as sns
 
-def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None):
+def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None, figsize=(24, 12)):
     """
     Plots boxplots for specified items in the DataFrame, optionally separated by hue, in a single figure.
 
@@ -233,9 +233,9 @@ def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None):
     cols = min(3, num_items)  # Número de colunas ajusta ao número de itens, máximo de 3 colunas
     
     if hue:
-        fig, axes = plt.subplots(rows, cols, figsize=(16, 5 * rows))  # Cria os subplots
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)  # Cria os subplots
     else:
-        fig, axes = plt.subplots(rows, cols, figsize=(16, 2 * rows))  # Cria os subplots
+        fig, axes = plt.subplots(rows, cols, figsize=figsize)  # Cria os subplots
     axes = axes.flatten()  # Flatten para o caso do número de itens ser ímpar
 
     for i, item in enumerate(items):
@@ -248,7 +248,7 @@ def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None):
             sns.boxplot(data=df, x=item, color=color, orient='h', ax=ax)
             # ax.set_ylabel('')
             
-        ax.set_xticks([])
+        ax.set_xlabel('')
         ax.set_title(f'{item}', fontsize=16, weight='bold')
         ax.yaxis.set_visible(False)  # Esconde o eixo y se não estiver usando hue
         ax.spines['top'].set_visible(False)  # Esconde a borda superior
