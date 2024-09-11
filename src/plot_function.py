@@ -83,11 +83,19 @@ def plot_custom_catplot(df, custom_palette, items, plot_type, hue):
         total_count = grouped['Count'].sum()
         grouped['Percentage'] = (grouped['Count'] / total_count) * 100
 
-   
+
+        # Define the size based on the number of unique categories in the item column
+        if df[item].nunique() <= 5:
+            height = 4  # Smaller height if less than 5 categories
+            aspect = 1.5  # Adjust aspect ratio
+        else:
+            height = 6  # Default height for more categories
+            aspect = 2   # Default aspect ratio
+            
         g = sns.catplot(
             data=grouped, kind=plot_type,
             x=item, y="Count", hue=hue,
-            palette=custom_palette, height=6, aspect=2,
+            palette=custom_palette, height=height, aspect=aspect,
             errorbar=None
         )
 
@@ -207,9 +215,12 @@ def plot_custom_histograms(df, custom_palette, items, hue_choice):
         # plt.tight_layout()  # Adjust layout to prevent overlap
         
         
-def plot_custom_boxplot(df, items, hue=None, custom_palette=None):
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+def plot_custom_boxplot(df, items, color=None, hue=None, custom_palette=None):
     """
-    Plots boxplots for specified items in the DataFrame, optionally separated by hue.
+    Plots boxplots for specified items in the DataFrame, optionally separated by hue, in a single figure.
 
     Args:
     - df (pd.DataFrame): DataFrame containing the data.
@@ -217,29 +228,39 @@ def plot_custom_boxplot(df, items, hue=None, custom_palette=None):
     - hue (str, optional): Column name to separate the boxplots by hue.
     - custom_palette (dict or list, optional): Color palette for the plot. Used if hue is provided.
     """
-    for item in items:
-        plt.figure(figsize=(6, 4))
-        
+    num_items = len(items)
+    rows = (num_items + 2) // 3  # Ajusta o número de linhas dependendo da quantidade de itens
+    cols = min(3, num_items)  # Número de colunas ajusta ao número de itens, máximo de 3 colunas
+    
+    if hue:
+        fig, axes = plt.subplots(rows, cols, figsize=(16, 5 * rows))  # Cria os subplots
+    else:
+        fig, axes = plt.subplots(rows, cols, figsize=(16, 2 * rows))  # Cria os subplots
+    axes = axes.flatten()  # Flatten para o caso do número de itens ser ímpar
+
+    for i, item in enumerate(items):
+        ax = axes[i]  # Seleciona o subplot para o item atual
+
         if hue:
-            # Use hue if specified
-            g = sns.boxplot(data=df, x=item, y=hue, hue=hue, orient='h', palette=custom_palette)
-            
-            # plt.title(f'Boxplot of {item} by {hue}', fontsize=16, weight='bold')
-            ax = plt.gca()
-            ax.set_ylabel(hue, fontsize=14)
+            sns.boxplot(data=df, x=item, y=hue, hue=hue, orient='h', palette=custom_palette, ax=ax)
+            # ax.set_ylabel(hue, fontsize=14)
         else:
-            # No hue specified, so only plot the item
-            g = sns.boxplot(data=df, x=item, orient='h')
-            plt.title(f'Boxplot of {item}', fontsize=16, weight='bold')
-            ax = plt.gca()
-            ax.set_ylabel('')
-        
-        ax.set_xlabel(item, fontsize=14)
-        ax.yaxis.set_visible(False)  # Hide y-axis if not using hue
-        ax.spines['top'].set_visible(False)  # Hide the top spine
-        ax.spines['right'].set_visible(False)  # Hide the right spine
-        ax.spines['left'].set_visible(False)  # Hide the left spine
-        ax.spines['bottom'].set_visible(False)  # Optionally hide the bottom spine
+            sns.boxplot(data=df, x=item, color=color, orient='h', ax=ax)
+            # ax.set_ylabel('')
+            
+        ax.set_xticks([])
+        ax.set_title(f'{item}', fontsize=16, weight='bold')
+        ax.yaxis.set_visible(False)  # Esconde o eixo y se não estiver usando hue
+        ax.spines['top'].set_visible(False)  # Esconde a borda superior
+        ax.spines['right'].set_visible(False)  # Esconde a borda direita
+        ax.spines['left'].set_visible(False)  # Esconde a borda esquerda
+        ax.spines['bottom'].set_visible(False)  # Esconde a borda inferior
         ax.grid(False)
-        
-        plt.tight_layout()
+
+    # Remove gráficos extras vazios
+    for j in range(num_items, len(axes)):
+        fig.delaxes(axes[j])
+
+    plt.tight_layout()
+    plt.show()
+
