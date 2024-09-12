@@ -33,7 +33,18 @@ class DataVisualizer:
             sns.barplot(data=grouped, x='count', y=feature, palette=custom_palette, hue=hue, ax=ax, width=width, orient='h')
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             self._customize_ax(ax)
-
+            
+            ax.set_xlabel('')
+            ax.set_ylabel('')
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(True)
+            ax.xaxis.set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
+            
             for p in ax.patches:
                 width = p.get_width()
                 percentage = (width / total_count) * 100
@@ -44,6 +55,7 @@ class DataVisualizer:
                                 textcoords="offset points",
                                 ha='left', va='center',
                                 fontsize=11, color='black', fontweight='bold')
+
 
         self._remove_extra_axes(axes, len(features))
         plt.tight_layout()
@@ -62,6 +74,15 @@ class DataVisualizer:
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             self._customize_ax(ax)
 
+            ax.set_xlabel('')
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
+
         self._remove_extra_axes(axes, len(features))
         plt.tight_layout()
 
@@ -75,7 +96,16 @@ class DataVisualizer:
             sns.histplot(data=self.df, x=feature, hue=hue, palette=custom_palette, kde=kde, ax=ax, stat='proportion')
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             self._customize_ax(ax)
-
+            
+            ax.set_xlabel('')
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(False)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
+            
         self._remove_extra_axes(axes, len(features))
         plt.tight_layout()
 
