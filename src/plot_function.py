@@ -69,14 +69,16 @@ class DataVisualizer:
             ax = axes[i]
             if hue:
                 sns.boxplot(data=self.df, x=feature, y=hue, hue=hue, orient='h', palette=custom_palette, ax=ax)
+                ax.set_ylabel('')
             else:
                 sns.boxplot(data=self.df, x=feature, color=self.color, orient='h', ax=ax)
+                ax.yaxis.set_visible(False)
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             self._customize_ax(ax)
 
             ax.set_xlabel('')
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
-            ax.yaxis.set_visible(False)
+            
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
             ax.spines['left'].set_visible(False)
