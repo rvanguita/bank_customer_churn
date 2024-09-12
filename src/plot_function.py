@@ -175,6 +175,7 @@ def plot_custom_scatterplot(df, x, y, hue, custom_palette, title_fontsize=16, la
 
     # plt.tight_layout()  # Adjust layout to prevent overlap
     
+    
 
 def data_visualizations(df, features, color='#c3e88d', hue=None, boxplot=False, histogram=None,
                         barplot=None, custom_palette=None, kde=False, figsize=(24, 12)):
@@ -195,7 +196,10 @@ def data_visualizations(df, features, color='#c3e88d', hue=None, boxplot=False, 
     if num_features == 0:
         print("No items to plot.")
         return
-    
+    # if barplot:
+    #     rows = (num_features + 2) // 2
+    #     cols = min(2, num_features)
+    # else:
     rows = (num_features + 2) // 3
     cols = min(3, num_features)
     
@@ -205,7 +209,45 @@ def data_visualizations(df, features, color='#c3e88d', hue=None, boxplot=False, 
     for i, feature in enumerate(features):
         ax = axes[i]
          
+        if barplot:
+            grouped = df.groupby([feature, hue]).size().reset_index(name='count')
 
+            total_count = grouped['count'].sum()
+            grouped['percentage'] = (grouped['count'] / total_count) * 100
+            
+            num_categories = df[feature].nunique()
+            
+            # Ajustar dinamicamente a largura das barras
+            if num_categories <= 5:
+                width = 0.8
+            else:
+                width = 0.6  # Reduzir a largura das barras para muitas categorias
+            
+            sns.barplot(data=grouped, x='count', y=feature, palette=custom_palette, hue=hue, ax=ax, width=width, orient='h')
+            
+            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            ax.yaxis.set_visible(True)
+            ax.spines['top'].set_visible(False)
+            ax.spines['right'].set_visible(False)
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+            ax.grid(False)
+
+            # Ajustar rótulos no eixo y se houver muitas categorias
+            if num_categories > 5:
+                ax.tick_params(axis='y', rotation=45)  # Rotacionar os rótulos do eixo y se houver muitas categorias
+
+            # Anotações de porcentagem
+            for p in ax.patches:
+                width = p.get_width()
+                percentage = (width / total_count) * 100
+                if percentage != 0:
+                    ax.annotate(f'{percentage:.1f}%', 
+                                (width, p.get_y() + p.get_height() / 2),
+                                xytext=(5, 0),  # Ajustar posição do texto
+                                textcoords="offset points",
+                                ha='left', va='center',
+                                fontsize=11, color='black', fontweight='bold')
     
         if histogram:
             sns.histplot(data=df, x=feature, hue=hue, palette=custom_palette, kde=kde, ax=ax, stat='proportion')
@@ -239,4 +281,3 @@ def data_visualizations(df, features, color='#c3e88d', hue=None, boxplot=False, 
         fig.delaxes(axes[j])
 
     plt.tight_layout()
-    plt.show()
