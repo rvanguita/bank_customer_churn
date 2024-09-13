@@ -3,3 +3,6 @@ matplotlib
 seaborn
 scikit-learn
 openpyxl
+optuna
+xgboost
+lightgbm
