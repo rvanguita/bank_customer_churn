@@ -275,6 +275,7 @@ class DataVisualizer:
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             self._customize_ax(ax)
             
+            ax.legend(loc='upper right', bbox_to_anchor=(1.1, 1.1))
             ax.set_xlabel('')
             ax.set_ylabel('')
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
@@ -337,11 +338,15 @@ class DataVisualizer:
         for i, feature in enumerate(features):
             ax = axes[i]
             sns.histplot(data=self.df, x=feature, hue=hue, palette=custom_palette, kde=kde, ax=ax, stat='proportion')
-            ax.set_title(f'{feature}', fontsize=16, weight='bold')
+
             self._customize_ax(ax)
-            
-            ax.set_xlabel('')
+
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
+            
+
+            ax.legend(loc='upper right')
+
+            ax.set_xlabel('')
             ax.yaxis.set_visible(False)
             ax.spines['top'].set_visible(False)
             ax.spines['right'].set_visible(False)
@@ -365,6 +370,7 @@ class DataVisualizer:
         
         ax.set_title(f'{percentage_exited.idxmin()} rate is about {percentage_exited.min():.2f}%', 
                      fontweight='bold', fontsize=13, pad=15, loc='center')
+        
         ax.set_xlabel('')
         ax.invert_xaxis()
         ax.tick_params(axis='both', which='both', length=0)
