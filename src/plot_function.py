@@ -1,6 +1,152 @@
 import matplotlib.pyplot as plt
 import seaborn as sns
 import pandas as pd
+import numpy as np
+
+
+from imblearn.over_sampling import SMOTE
+from sklearn.model_selection import KFold
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, 
+    log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc
+)
+
+from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+
+
+class ValidationClassification:
+    def __init__(self, model, rouc_curve=False, oversampling=False, confusion_matrix=False):
+        self.rouc_curve = rouc_curve
+        self.oversampling = oversampling
+        self.model = model
+        self.confusion_matrix = confusion_matrix
+
+    # @staticmethod
+    def plot_roc_curve(self, fpr, tpr, roc_auc, figsize=(4, 3), color='#c53b53'):
+        plt.figure(figsize=figsize)
+        plt.plot(fpr, tpr, color=color, lw=4, label=f'ROC curve (area = {roc_auc:.2f})')
+        plt.plot([0, 1], [0, 1], color='gray', linestyle='--')  # Linha diagonal
+        plt.xlim([0.0, 1.0])
+        plt.ylim([0.0, 1.0])
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC curve', fontsize=16, weight='bold')
+        plt.legend(loc="lower right")
+        
+
+        plt.gca().grid(False)
+        plt.gca().yaxis.set_visible(True)
+        plt.gca().xaxis.set_visible(True)
+        plt.gca().spines['top'].set_visible(False)
+        plt.gca().spines['right'].set_visible(False)
+        plt.gca().spines['left'].set_visible(False)
+        plt.gca().spines['bottom'].set_visible(False)
+
+        plt.show()
+
+
+
+    # @staticmethod
+    def plot_confusion_matrix(self, y, predictions):
+        cm = confusion_matrix(y, predictions)
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
+        disp.plot(cmap='Blues', values_format='d')
+        plt.show()
+
+
+    # @staticmethod
+    def calculate_metrics(self, y, predictions, predictions_proba):
+        metrics = {
+            'Accuracy': accuracy_score(y, predictions),
+            'Precision': precision_score(y, predictions, average='weighted', zero_division=0),
+            'Recall': recall_score(y, predictions, average='weighted', zero_division=0),
+            'F1 Score': f1_score(y, predictions, average='weighted', zero_division=0),
+            'ROC AUC': roc_auc_score(y, predictions_proba[:, 1]),
+            'Matthews Corrcoef': matthews_corrcoef(y, predictions),
+            'Cohen Kappa': cohen_kappa_score(y, predictions),
+            'Log Loss': log_loss(y, predictions_proba)
+        }
+        return {k: round(v * 100, 2) if k != 'Matthews Corrcoef' and k != 'Cohen Kappa' else round(v, 2) 
+                for k, v in metrics.items()}
+
+
+    # @staticmethod
+    def normal(self, X, y):
+        self.model.fit(X, y)
+        predictions_proba = self.model.predict_proba(X)
+        predictions = self.model.predict(X)
+        
+        scores = self.calculate_metrics(y, predictions, predictions_proba)
+        scores_df = pd.DataFrame([scores])
+        
+        if self.confusion_matrix:
+            print("Confusion Matrix:\n", confusion_matrix(y, predictions))
+            # ValidationClassification.plot_confusion_matrix(y, predictions, model)
+        
+        if self.rouc_curve:
+
+            fpr, tpr, _ = roc_curve(y, predictions_proba[:, 1])
+            roc_auc = auc(fpr, tpr)
+            self.plot_roc_curve(fpr, tpr, roc_auc)
+
+        return scores_df
+
+
+    # @staticmethod
+    def cross(self, X, y, n_splits=5):
+        cv = KFold(n_splits=n_splits, random_state=42, shuffle=True)
+        metrics_cross = {key: [] for key in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 
+                                             'Matthews Corrcoef', 'Cohen Kappa', 'Log Loss']}
+        confusion_matrices = []
+        roc_auc_scores = []
+        fpr_list = []
+        tpr_list = []
+
+        for index_train, index_validation in cv.split(X, y):
+            X_train, X_validation = X[index_train], X[index_validation]
+            y_train, y_validation = y[index_train], y[index_validation]
+
+            if self.oversampling:
+                smote = SMOTE(random_state=42)
+                X_train, y_train = smote.fit_resample(X_train, y_train)
+
+            self.model.fit(X_train, y_train)
+            predictions = self.model.predict(X_validation)
+            predict_proba = self.model.predict_proba(X_validation)
+            
+            metrics = self.calculate_metrics(y_validation, predictions, predict_proba)
+            for key in metrics_cross.keys():
+                metrics_cross[key].append(metrics[key])
+
+            if self.confusion_matrix:
+                cm = confusion_matrix(y_validation, predictions)
+                confusion_matrices.append(cm)
+                
+            if self.rouc_curve:    
+                fpr, tpr, _ = roc_curve(y_validation, predict_proba[:, 1])
+                roc_auc = auc(fpr, tpr)
+                roc_auc_scores.append(roc_auc)
+                fpr_list.append(fpr)
+                tpr_list.append(tpr)
+
+        if self.confusion_matrix:
+            last_fold_cm = confusion_matrices[-1]
+            print("Confusion Matrix:\n", confusion_matrix(y_validation, predictions))
+            # ValidationClassification.plot_confusion_matrix(y_validation, predictions, model)
+
+        if self.rouc_curve:
+            self.plot_roc_curve(fpr_list[-1], tpr_list[-1], roc_auc_scores[-1])
+
+        # Plotting Confusion Matrix for the Last Fold
+
+
+        scores = {key: round(np.mean(val), 2) if key != 'Matthews Corrcoef' and key != 'Cohen Kappa' 
+                  else round(np.mean(val), 2) for key, val in metrics_cross.items()}
+        scores_df = pd.DataFrame([scores])
+        
+        return scores_df
+
+
 
 class DataVisualizer:
     def __init__(self, df, color='#c3e88d', figsize=(24, 12)):
