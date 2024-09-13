@@ -6,4 +6,5 @@ openpyxl
 optuna
 xgboost
 lightgbm
+catboost
 yellowbrick

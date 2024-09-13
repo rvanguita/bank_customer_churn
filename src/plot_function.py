@@ -4,6 +4,12 @@ import pandas as pd
 import numpy as np
 
 
+import catboost as cb
+import lightgbm as lgb
+import xgboost as xgb
+import optuna
+
+
 from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import KFold
 from sklearn.metrics import (
@@ -14,6 +20,93 @@ from sklearn.metrics import (
 from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
 
 
+
+class ClassificationHyperTuner:
+    def __init__(self, X_train, y_train, X_test, y_test, n_trials=30, model_name="catboost"):
+        # Initialize data and configuration
+        self.X_train = X_train
+        self.y_train = y_train
+        self.X_test = X_test
+        self.y_test = y_test
+        self.n_trials = n_trials
+        self.model_name = model_name
+
+    def objective(self, trial):
+        # Select model based on the given model name
+        if self.model_name == "catboost":
+            return self.boost_cat(trial)
+        elif self.model_name == "lightgbm":
+            return self.boost_lightgbm(trial)
+        elif self.model_name == "xgboost":
+            return self.boost_xg(trial)
+        else:
+            raise ValueError("Unsupported model. Choose between 'catboost', 'lightgbm', or 'xgboost'.")
+
+    def run_optimization(self):
+        # Study for hyperparameter optimization
+        study = optuna.create_study(direction='maximize')
+        study.optimize(self.objective, n_trials=self.n_trials)
+        
+        print(f"Best hyperparameters: {study.best_params}")
+        print(f"Best AUC: {study.best_value}")
+        
+        return study.best_params, study.best_value
+
+    def boost_cat(self, trial):
+        # Define hyperparameters for CatBoost
+        params = {
+            "iterations": 1000,
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
+            "depth": trial.suggest_int("depth", 1, 10),
+            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
+            "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+        }
+
+        model = cb.CatBoostClassifier(**params, silent=True)
+        model.fit(self.X_train, self.y_train)
+        predictions = model.predict_proba(self.X_test)[:, 1]
+        auc = roc_auc_score(self.y_test, predictions)
+        return auc
+
+    def boost_lightgbm(self, trial):
+        # Define hyperparameters for LightGBM
+        params = {
+            "objective": "binary",
+            "n_estimators": 1000,
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
+            "num_leaves": trial.suggest_int("num_leaves", 2, 1024),
+            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.05, 1.0),
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+        }
+
+        model = lgb.LGBMClassifier(**params)
+        model.fit(self.X_train, self.y_train)
+        predictions = model.predict_proba(self.X_test)[:, 1]
+        auc = roc_auc_score(self.y_test, predictions)
+        return auc
+
+    def boost_xg(self, trial):
+        # Define hyperparameters for XGBoost
+        params = {
+            'objective': 'binary:logistic',
+            'n_estimators': 5000,
+            'seed': 42,
+            'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.1, log=True),
+            'max_depth': trial.suggest_int('max_depth', 1, 10),
+            'subsample': trial.suggest_float('subsample', 0.05, 1.0),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.05, 1.0),
+            'min_child_weight': trial.suggest_int('min_child_weight', 1, 20)
+        }
+
+        model = xgb.XGBClassifier(**params)
+        model.fit(self.X_train, self.y_train, verbose=0)
+        predictions = model.predict_proba(self.X_test)[:, 1]
+        auc = roc_auc_score(self.y_test, predictions)
+        return auc
+
+
 class ValidationClassification:
     def __init__(self, model, rouc_curve=False, oversampling=False, confusion_matrix=False):
         self.rouc_curve = rouc_curve
@@ -21,7 +114,7 @@ class ValidationClassification:
         self.model = model
         self.confusion_matrix = confusion_matrix
 
-    # @staticmethod
+
     def plot_roc_curve(self, fpr, tpr, roc_auc, figsize=(4, 3), color='#c53b53'):
         plt.figure(figsize=figsize)
         plt.plot(fpr, tpr, color=color, lw=4, label=f'ROC curve (area = {roc_auc:.2f})')
@@ -45,8 +138,6 @@ class ValidationClassification:
         plt.show()
 
 
-
-    # @staticmethod
     def plot_confusion_matrix(self, y, predictions):
         cm = confusion_matrix(y, predictions)
         disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
@@ -54,7 +145,6 @@ class ValidationClassification:
         plt.show()
 
 
-    # @staticmethod
     def calculate_metrics(self, y, predictions, predictions_proba):
         metrics = {
             'Accuracy': accuracy_score(y, predictions),
@@ -70,7 +160,6 @@ class ValidationClassification:
                 for k, v in metrics.items()}
 
 
-    # @staticmethod
     def normal(self, X, y):
         self.model.fit(X, y)
         predictions_proba = self.model.predict_proba(X)
@@ -92,7 +181,6 @@ class ValidationClassification:
         return scores_df
 
 
-    # @staticmethod
     def cross(self, X, y, n_splits=5):
         cv = KFold(n_splits=n_splits, random_state=42, shuffle=True)
         metrics_cross = {key: [] for key in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 
