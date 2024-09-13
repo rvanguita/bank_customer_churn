@@ -17,7 +17,7 @@ from sklearn.metrics import (
     log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc
 )
 
-from sklearn.metrics import ConfusionMatrixDisplay, confusion_matrix
+from sklearn.metrics import confusion_matrix
 
 
 
@@ -138,11 +138,11 @@ class ValidationClassification:
         plt.show()
 
 
-    def plot_confusion_matrix(self, y, predictions):
-        cm = confusion_matrix(y, predictions)
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
-        disp.plot(cmap='Blues', values_format='d')
-        plt.show()
+    # def plot_confusion_matrix(self, y, predictions):
+    #     cm = confusion_matrix(y, predictions)
+    #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
+    #     disp.plot(cmap='Blues', values_format='d')
+    #     plt.show()
 
 
     def calculate_metrics(self, y, predictions, predictions_proba):
@@ -189,6 +189,9 @@ class ValidationClassification:
         roc_auc_scores = []
         fpr_list = []
         tpr_list = []
+        
+        all_predictions = []
+        all_true_labels = []
 
         for index_train, index_validation in cv.split(X, y):
             X_train, X_validation = X[index_train], X[index_validation]
@@ -207,8 +210,12 @@ class ValidationClassification:
                 metrics_cross[key].append(metrics[key])
 
             if self.confusion_matrix:
-                cm = confusion_matrix(y_validation, predictions)
-                confusion_matrices.append(cm)
+                # cm = confusion_matrix(y_validation, predictions)
+                # confusion_matrices.append(cm)
+                
+                all_predictions.extend(predictions)
+                all_true_labels.extend(y_validation)
+                
                 
             if self.rouc_curve:    
                 fpr, tpr, _ = roc_curve(y_validation, predict_proba[:, 1])
@@ -218,14 +225,15 @@ class ValidationClassification:
                 tpr_list.append(tpr)
 
         if self.confusion_matrix:
-            last_fold_cm = confusion_matrices[-1]
-            print("Confusion Matrix:\n", confusion_matrix(y_validation, predictions))
-            # ValidationClassification.plot_confusion_matrix(y_validation, predictions, model)
+            final_confusion_matrix = confusion_matrix(all_true_labels, all_predictions)
+            print("Final Confusion Matrix (All Folds):\n", final_confusion_matrix)
+            # self.plot_confusion_matrix(np.array(all_true_labels), np.array(all_predictions))
+
 
         if self.rouc_curve:
             self.plot_roc_curve(fpr_list[-1], tpr_list[-1], roc_auc_scores[-1])
 
-        # Plotting Confusion Matrix for the Last Fold
+
 
 
         scores = {key: round(np.mean(val), 2) if key != 'Matthews Corrcoef' and key != 'Cohen Kappa' 
@@ -233,7 +241,6 @@ class ValidationClassification:
         scores_df = pd.DataFrame([scores])
         
         return scores_df
-
 
 
 class DataVisualizer:
