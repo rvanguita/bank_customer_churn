@@ -344,7 +344,7 @@ class DataVisualizer:
             ax.set_title(f'{feature}', fontsize=16, weight='bold')
             
 
-            ax.legend(loc='upper right')
+            # ax.legend(loc='upper right')
 
             ax.set_xlabel('')
             ax.yaxis.set_visible(False)
