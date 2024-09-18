@@ -3,7 +3,7 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 
-
+import shap
 import catboost as cb
 import lightgbm as lgb
 import xgboost as xgb
@@ -18,6 +18,64 @@ from sklearn.metrics import (
 )
 
 from sklearn.metrics import confusion_matrix
+
+
+
+
+class ShapPlot:
+    def __init__(self, model, X_test, df_feature, features_drop):
+        self.model = model
+        self.X_test = X_test
+        self.features_drop = features_drop
+        self.feature_names = df_feature.drop(self.features_drop, axis=1).columns
+        self.explainer = shap.Explainer(self.model)  # Reutiliza o explainer para consistência
+        
+    def first_analysis(self, extension=False):
+        shap_values = self.explainer(self.X_test)
+
+        # Ajuste os nomes das features
+        shap_values.feature_names = self.feature_names
+
+        # Gráficos principais
+        shap.plots.beeswarm(shap_values)
+        shap.plots.bar(shap_values)
+        shap.waterfall_plot(shap_values[0])
+
+        # Extensão opcional para análise adicional
+        if extension:
+            shap.summary_plot(shap_values, self.X_test, feature_names=self.feature_names)
+        
+    def complete(self, comparison=False, analysis=None, interaction_index=None, show_interactions=False):
+        # Calcule os valores SHAP
+        shap_values = self.explainer(self.X_test)
+
+        # Converter X_test para DataFrame para melhores visualizações
+        X_test_df = pd.DataFrame(self.X_test, columns=self.feature_names)
+
+        # Criar o objeto Explanation para o force_plot
+        shap_explanation = shap.Explanation(
+            values=shap_values.values[0],  # Os valores SHAP
+            base_values=self.explainer.expected_value,  # O valor esperado (média das previsões)
+            data=X_test_df.iloc[0],  # A amostra de entrada que estamos explicando
+            feature_names=self.feature_names  # Os nomes das features
+        )
+
+        # Exibir força de explicação para uma previsão
+        shap.initjs()
+        shap.force_plot(shap_explanation.base_values, shap_explanation.values, shap_explanation.data)
+
+        # Criar gráfico de decisão
+        shap.decision_plot(shap_explanation.base_values, shap_explanation.values, shap_explanation.data)
+
+        # Calcular e exibir interações SHAP, se necessário
+        if show_interactions:
+            shap_interaction_values = self.explainer.shap_interaction_values(self.X_test)  # Correção para `self.explainer`
+            shap.summary_plot(shap_interaction_values, self.X_test, feature_names=self.feature_names)
+
+        # Se `comparison` for verdadeiro, criar gráfico de dependência
+        if comparison and analysis is not None:
+            shap.dependence_plot(analysis, shap_values, self.X_test, feature_names=self.feature_names, interaction_index=interaction_index)
+
 
 
 
