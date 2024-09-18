@@ -14,7 +14,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import KFold
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, 
-    log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc
+    log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc, ConfusionMatrixDisplay
 )
 
 from sklearn.metrics import confusion_matrix
@@ -54,13 +54,26 @@ class ClassificationHyperTuner:
 
     def boost_cat(self, trial):
         # Define hyperparameters for CatBoost
+        # params = {
+        #     "iterations": 1000,
+        #     "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
+        #     "depth": trial.suggest_int("depth", 1, 10),
+        #     "subsample": trial.suggest_float("subsample", 0.05, 1.0),
+        #     "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
+        #     "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+        # }
+
         params = {
-            "iterations": 1000,
-            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
-            "depth": trial.suggest_int("depth", 1, 10),
-            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
-            "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
-            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+            "iterations": trial.suggest_int("iterations", 500, 2000),
+            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 0.3, log=True),
+            "depth": trial.suggest_int("depth", 1, 16),
+            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
+            "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.5, 1.0),
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 200),
+            "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-3, 10.0, log=True),
+            "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Depthwise", "Lossguide"]),
+            "border_count": trial.suggest_int("border_count", 32, 255),
+            "od_type": trial.suggest_categorical("od_type", ["IncToDec", "Iter"]),
         }
 
         model = cb.CatBoostClassifier(**params, silent=True)
@@ -108,9 +121,8 @@ class ClassificationHyperTuner:
 
 
 class ValidationClassification:
-    def __init__(self, model, rouc_curve=False, oversampling=False, confusion_matrix=False):
+    def __init__(self, model, rouc_curve=False, confusion_matrix=False):
         self.rouc_curve = rouc_curve
-        self.oversampling = oversampling
         self.model = model
         self.confusion_matrix = confusion_matrix
 
@@ -138,13 +150,6 @@ class ValidationClassification:
         plt.show()
 
 
-    # def plot_confusion_matrix(self, y, predictions):
-    #     cm = confusion_matrix(y, predictions)
-    #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
-    #     disp.plot(cmap='Blues', values_format='d')
-    #     plt.show()
-
-
     def calculate_metrics(self, y, predictions, predictions_proba):
         metrics = {
             'Accuracy': accuracy_score(y, predictions),
@@ -160,6 +165,40 @@ class ValidationClassification:
                 for k, v in metrics.items()}
 
 
+    def plot_confusion_matrix(self, y, predictions):
+    #     cm = confusion_matrix(y, predictions)
+    #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
+    #     disp.plot(cmap='Blues', values_format='d')
+    #     plt.show()
+    # def confusion_matrix_sklearn(model, y, predictions):
+        """
+        To plot the confusion_matrix with percentages
+
+        model: classifier
+        predictors: independent variables
+        target: dependent variable
+        """
+        # Predicting using the independent variables.
+        # y_pred = self.model.predict(y)
+        # Creating the confusion matrix.
+        cm = confusion_matrix(y, predictions)
+        labels = np.asarray(
+            [
+                ["{0:0.0f}".format(item) + "\n{0:.2%}".format(item / cm.flatten().sum())]
+                for item in cm.flatten()
+            ]
+        ).reshape(2, 2)
+
+        # Plotting the confusion matrix.
+        plt.figure(figsize=(6, 4))
+        sns.heatmap(cm, annot=labels, fmt="")
+        plt.ylabel("True label")
+        plt.xlabel("Predicted label")
+        
+        
+        
+
+
     def normal(self, X, y):
         self.model.fit(X, y)
         predictions_proba = self.model.predict_proba(X)
@@ -169,8 +208,8 @@ class ValidationClassification:
         scores_df = pd.DataFrame([scores])
         
         if self.confusion_matrix:
-            print("Confusion Matrix:\n", confusion_matrix(y, predictions))
-            # ValidationClassification.plot_confusion_matrix(y, predictions, model)
+            # print("Confusion Matrix:\n", confusion_matrix(y, predictions))
+            self.plot_confusion_matrix(y, predictions)
         
         if self.rouc_curve:
 
@@ -181,7 +220,7 @@ class ValidationClassification:
         return scores_df
 
 
-    def cross(self, X, y, n_splits=5):
+    def cross(self, X, y, n_splits=5, oversampling=False):
         cv = KFold(n_splits=n_splits, random_state=42, shuffle=True)
         metrics_cross = {key: [] for key in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 
                                              'Matthews Corrcoef', 'Cohen Kappa', 'Log Loss']}
@@ -193,41 +232,42 @@ class ValidationClassification:
         all_predictions = []
         all_true_labels = []
 
-        for index_train, index_validation in cv.split(X, y):
-            X_train, X_validation = X[index_train], X[index_validation]
-            y_train, y_validation = y[index_train], y[index_validation]
+        for index_train, indeX_test in cv.split(X, y):
+            X_train, X_test = X[index_train], X[indeX_test]
+            y_train, y_test = y[index_train], y[indeX_test]
 
-            if self.oversampling:
+            if oversampling:
                 smote = SMOTE(random_state=42)
                 X_train, y_train = smote.fit_resample(X_train, y_train)
 
             self.model.fit(X_train, y_train)
-            predictions = self.model.predict(X_validation)
-            predict_proba = self.model.predict_proba(X_validation)
+            predictions = self.model.predict(X_test)
+            predict_proba = self.model.predict_proba(X_test)
             
-            metrics = self.calculate_metrics(y_validation, predictions, predict_proba)
+            metrics = self.calculate_metrics(y_test, predictions, predict_proba)
+            
             for key in metrics_cross.keys():
                 metrics_cross[key].append(metrics[key])
 
             if self.confusion_matrix:
-                # cm = confusion_matrix(y_validation, predictions)
+                # cm = confusion_matrix(y_test, predictions)
                 # confusion_matrices.append(cm)
                 
                 all_predictions.extend(predictions)
-                all_true_labels.extend(y_validation)
+                all_true_labels.extend(y_test)
                 
                 
             if self.rouc_curve:    
-                fpr, tpr, _ = roc_curve(y_validation, predict_proba[:, 1])
+                fpr, tpr, _ = roc_curve(y_test, predict_proba[:, 1])
                 roc_auc = auc(fpr, tpr)
                 roc_auc_scores.append(roc_auc)
                 fpr_list.append(fpr)
                 tpr_list.append(tpr)
 
         if self.confusion_matrix:
-            final_confusion_matrix = confusion_matrix(all_true_labels, all_predictions)
-            print("Final Confusion Matrix (All Folds):\n", final_confusion_matrix)
-            # self.plot_confusion_matrix(np.array(all_true_labels), np.array(all_predictions))
+            # final_confusion_matrix = confusion_matrix(all_true_labels, all_predictions)
+            # print("Final Confusion Matrix (All Folds):\n", final_confusion_matrix)
+            self.plot_confusion_matrix(np.array(all_true_labels), np.array(all_predictions))
 
 
         if self.rouc_curve:

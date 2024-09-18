@@ -10,3 +10,5 @@ catboost
 jupyter 
 notebook
 imblearn
+scipy
+shap
