@@ -224,21 +224,6 @@ class ValidationClassification:
 
 
     def plot_confusion_matrix(self, y, predictions):
-    #     cm = confusion_matrix(y, predictions)
-    #     disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=self.model.classes_)
-    #     disp.plot(cmap='Blues', values_format='d')
-    #     plt.show()
-    # def confusion_matrix_sklearn(model, y, predictions):
-        """
-        To plot the confusion_matrix with percentages
-
-        model: classifier
-        predictors: independent variables
-        target: dependent variable
-        """
-        # Predicting using the independent variables.
-        # y_pred = self.model.predict(y)
-        # Creating the confusion matrix.
         cm = confusion_matrix(y, predictions)
         labels = np.asarray(
             [
@@ -250,12 +235,10 @@ class ValidationClassification:
         # Plotting the confusion matrix.
         plt.figure(figsize=(6, 4))
         sns.heatmap(cm, annot=labels, fmt="")
-        plt.ylabel("True label")
-        plt.xlabel("Predicted label")
+        plt.title('Confusion Matrix', fontsize=16, weight='bold')
+        plt.ylabel("True")
+        plt.xlabel("Predicted")
         
-        
-        
-
 
     def normal(self, X, y):
         self.model.fit(X, y)
