@@ -14,7 +14,7 @@ from imblearn.over_sampling import SMOTE
 from sklearn.model_selection import KFold
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score, roc_auc_score, 
-    log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc, ConfusionMatrixDisplay
+    log_loss, matthews_corrcoef, cohen_kappa_score, roc_curve, auc
 )
 
 from sklearn.metrics import confusion_matrix
@@ -178,7 +178,7 @@ class ClassificationHyperTuner:
         return auc
 
 
-class ValidationClassification:
+class TrainingValidation:
     def __init__(self, model, rouc_curve=False, confusion_matrix=False):
         self.rouc_curve = rouc_curve
         self.model = model
@@ -240,14 +240,16 @@ class ValidationClassification:
         plt.xlabel("Predicted")
         
 
-    def normal(self, X, y):
+    def normal(self, X, y, oversampling=False):
         self.model.fit(X, y)
         predictions_proba = self.model.predict_proba(X)
         predictions = self.model.predict(X)
         
         scores = self.calculate_metrics(y, predictions, predictions_proba)
         scores_df = pd.DataFrame([scores])
-        
+        if oversampling:
+            smote = SMOTE(random_state=42)
+            X, y = smote.fit_resample(X, y)        
         if self.confusion_matrix:
             # print("Confusion Matrix:\n", confusion_matrix(y, predictions))
             self.plot_confusion_matrix(y, predictions)
@@ -273,9 +275,9 @@ class ValidationClassification:
         all_predictions = []
         all_true_labels = []
 
-        for index_train, indeX_test in cv.split(X, y):
-            X_train, X_test = X[index_train], X[indeX_test]
-            y_train, y_test = y[index_train], y[indeX_test]
+        for idx_train, idx_test in cv.split(X, y):
+            X_train, X_test = X[idx_train], X[idx_test]
+            y_train, y_test = y[idx_train], y[idx_test]
 
             if oversampling:
                 smote = SMOTE(random_state=42)
