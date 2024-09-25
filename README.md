@@ -21,14 +21,24 @@ The dataset was obtained from Kaggle, where a variety of information about it is
 
 After conducting an initial analysis to identify possible duplicate rows, incorrect variable types in the DataFrame, and missing rows, it was possible to determine the proportion of customers who chose to leave. The figure below illustrates this percentage, revealing that 20.38% of customers opted to leave the bank, pertaining to the period during which the database was developed.
 
-![](assets/img/1.png)
+<div style="text-align: center;">
+    <img src="assets/img/1.png" alt="Descrição da imagem">
+</div>
 
+Gender, Geography, Card Type, NumOfProducts, HasCrCard, IsActiveMember, Complain, Satisfaction Score
 
 ![](assets/img/2.png)
 
+CreditScore, Age, Balance, EstimatedSalary, Point Earned, Tenure
+
 ![](assets/img/3.png)
 
+Balance, Age
+
+
 ![](assets/img/4.png)
+
+CreditScore, Age, Balance, NumOfProducts, EstimatedSalary, Satisfaction Score, Point Earned
 
 ![](assets/img/5.png)
 
@@ -46,10 +56,14 @@ After conducting an initial analysis to identify possible duplicate rows, incorr
 | cross_xgb     | 85.39    | 84.32     | 85.39  | 84.43    | 84.51   | 0.51              | 0.50        | 36.88    |
 
 
-![](assets/img/7.png)
+<div style="text-align: center;">
+    <img src="assets/img/7.png" alt="Descrição da imagem">
+</div>
 
 
-![](assets/img/8.png)
+<div style="text-align: center;">
+    <img src="assets/img/8.png" alt="Descrição da imagem">
+</div>
 
 
 ![](assets/img/9.png)
