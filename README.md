@@ -11,11 +11,11 @@ The objective of this project is to analyze and develop the training of a machin
 
 ### Repository Layout
 
-The file main.ipynb presents all the code and other analyses performed on the data. In the assets/img folder, you can find all the images used in this document. In the data/ folder, you will find the zip file with the original data and the six CSV files representing the turbines.
+The file __main.ipynb__ presents all the code and other analyses performed on the data. In the __assets/img__ folder, you can find all the images used in this document. In the __data/__ folder, you will find the zip file with the original data and the six CSV files representing the turbines. The __requirements.txt__ file is where all the libraries used in this project are listed
 
 ## [Data Set](https://www.kaggle.com/datasets/radheshyamkollipara/bank-customer-churn)
 
-The dataset was obtained from Kaggle, where a variety of information about it is available, including descriptions of the meaning of each column and the types of data we might encounter, such as categorical, numerical, and so on. This information can be found in the main.ipynb file, right at the beginning of the document. I will not include this information here in the README.md to avoid cluttering the content.
+The dataset was obtained from Kaggle, where a variety of information about it is available, including descriptions of the meaning of each column and the types of data we might encounter, such as categorical, numerical, and so on. This information can be found in the __main.ipynb__ file, right at the beginning of the document. I will not include this information here in the README.md to avoid cluttering the content.
 
 ## Methodology and Results
 
