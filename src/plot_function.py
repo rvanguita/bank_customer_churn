@@ -19,9 +19,6 @@ from sklearn.metrics import (
 
 from sklearn.metrics import confusion_matrix
 
-
-
-
 class ShapPlot:
     def __init__(self, model, X_test, df_feature, features_drop):
         self.model = model
@@ -75,8 +72,6 @@ class ShapPlot:
         # Se `comparison` for verdadeiro, criar gráfico de dependência
         if comparison and analysis is not None:
             shap.dependence_plot(analysis, shap_values, self.X_test, feature_names=self.feature_names, interaction_index=interaction_index)
-
-
 
 
 class ClassificationHyperTuner:
@@ -160,15 +155,27 @@ class ClassificationHyperTuner:
 
     def boost_xg(self, trial):
         # Define hyperparameters for XGBoost
+        # params = {
+        #     'objective': 'binary:logistic',
+        #     'n_estimators': 5000,
+        #     'seed': 42,
+        #     'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.1, log=True),
+        #     'max_depth': trial.suggest_int('max_depth', 1, 10),
+        #     'subsample': trial.suggest_float('subsample', 0.05, 1.0),
+        #     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.05, 1.0),
+        #     'min_child_weight': trial.suggest_int('min_child_weight', 1, 20)
+        # }
+        
         params = {
             'objective': 'binary:logistic',
-            'n_estimators': 5000,
+            'n_estimators': trial.suggest_int('n_estimators', 100, 1500),
             'seed': 42,
-            'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.1, log=True),
-            'max_depth': trial.suggest_int('max_depth', 1, 10),
-            'subsample': trial.suggest_float('subsample', 0.05, 1.0),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.05, 1.0),
-            'min_child_weight': trial.suggest_int('min_child_weight', 1, 20)
+            'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.05, log=True),
+            'max_depth': trial.suggest_int('max_depth', 3, 6),  # Profundidade menor devido às features manuais
+            'subsample': trial.suggest_float('subsample', 0.6, 0.9),
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 0.8),
+            'min_child_weight': trial.suggest_int('min_child_weight', 10, 15),
+            # 'early_stopping_rounds': 100
         }
 
         model = xgb.XGBClassifier(**params)
@@ -264,7 +271,7 @@ class TrainingValidation:
 
 
     def cross(self, X, y, n_splits=5, oversampling=False):
-        cv = KFold(n_splits=n_splits, random_state=42, shuffle=True)
+        cv = KFold(n_splits=n_splits, shuffle=True)
         metrics_cross = {key: [] for key in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 
                                              'Matthews Corrcoef', 'Cohen Kappa', 'Log Loss']}
         confusion_matrices = []
@@ -280,7 +287,7 @@ class TrainingValidation:
             y_train, y_test = y[idx_train], y[idx_test]
 
             if oversampling:
-                smote = SMOTE(random_state=42)
+                smote = SMOTE()
                 X_train, y_train = smote.fit_resample(X_train, y_train)
 
             self.model.fit(X_train, y_train)
@@ -506,3 +513,6 @@ class DataVisualizer:
     def _remove_extra_axes(self, axes, num_features):
         for j in range(num_features, len(axes)):
             plt.delaxes(axes[j])
+            
+            
+            
