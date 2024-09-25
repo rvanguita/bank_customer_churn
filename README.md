@@ -6,7 +6,7 @@ The acquisition of new customers is always associated with a significant financi
 
 ## Objective
 
-The objective of this project is to analyze and develop the training of a machine learning model to identify which customers have a higher tendency to churn. A comparison was also made between different classification methods (CatBoostClassifier, LGBMClassifier, and XGBClassifier) using the following validation metrics: Accuracy, Precision, Recall, F1 Score, ROC AUC, Matthews Correlation Coefficient, Cohen Kappa, and Log Loss.
+The objective of this project is to analyze and develop the training of a machine learning model to identify which customers have a higher tendency to churn. A comparison was also made between different classification methods (catboost, lightgbm, and xgboost) using the following validation metrics: Accuracy, Precision, Recall, F1 Score, ROC AUC, Matthews Correlation Coefficient, Cohen Kappa, and Log Loss.
 
 
 ### Repository Layout
@@ -19,22 +19,43 @@ The dataset was obtained from Kaggle, where a variety of information about it is
 
 ## Methodology and Results
 
+After conducting an initial analysis to identify possible duplicate rows, incorrect variable types in the DataFrame, and missing rows, it was possible to determine the proportion of customers who chose to leave. The figure below illustrates this percentage, revealing that 20.38% of customers opted to leave the bank, pertaining to the period during which the database was developed.
+
+![](assets/img/1.png)
+
+
+![](assets/img/2.png)
+
+![](assets/img/3.png)
+
+![](assets/img/4.png)
+
+![](assets/img/5.png)
+
+![](assets/img/6.png)
+
+
+
+| Model         | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
+|---------------|----------|-----------|--------|----------|---------|-------------------|-------------|----------|
+| normal_xgb    | 97.40    | 97.42     | 97.40  | 97.35    | 99.64   | 0.92              | 0.92        | 11.91    |
+| normal_lgb    | 92.53    | 92.56     | 92.53  | 92.10    | 97.67   | 0.76              | 0.75        | 20.03    |
+| normal_cb     | 91.55    | 91.57     | 91.55  | 90.97    | 95.88   | 0.73              | 0.71        | 22.22    |
+| cross_lgb     | 86.27    | 85.36     | 86.27  | 85.21    | 86.08   | 0.53              | 0.52        | 33.75    |
+| cross_cb      | 86.27    | 85.36     | 86.27  | 85.27    | 86.10   | 0.53              | 0.52        | 33.99    |
+| cross_xgb     | 85.39    | 84.32     | 85.39  | 84.43    | 84.51   | 0.51              | 0.50        | 36.88    |
+
+
+![](assets/img/7.png)
+
+
+![](assets/img/8.png)
+
+
+![](assets/img/9.png)
+
+
+![](assets/img/10.png)
+
 
 ## Conclusion
-
-## Criar e Ativar o Ambiente Virtual
-
-1. Crie o ambiente virtual:
-    ```bash
-    python3 -m venv .venv
-    ```
-
-2. Ative o ambiente virtual:
-    ```bash
-    source .venv/bin/activate
-    ```
-
-3. Instale as dependências:
-    ```bash
-    pip install -r requirements.txt
-    ```
