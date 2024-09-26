@@ -75,7 +75,7 @@ class ShapPlot:
 
 
 class ClassificationHyperTuner:
-    def __init__(self, X_train, y_train, X_test, y_test, n_trials=30, model_name="catboost"):
+    def __init__(self, X_train, y_train, X_test, y_test, n_trials=30, model_name=None):
         # Initialize data and configuration
         self.X_train = X_train
         self.y_train = y_train
@@ -86,14 +86,15 @@ class ClassificationHyperTuner:
 
     def objective(self, trial):
         # Select model based on the given model name
-        if self.model_name == "catboost":
+        if self.model_name == "cat":
             return self.boost_cat(trial)
-        elif self.model_name == "lightgbm":
-            return self.boost_lightgbm(trial)
-        elif self.model_name == "xgboost":
-            return self.boost_xg(trial)
+        elif self.model_name == "lgb":
+            return self.boost_lgb(trial)
+        elif self.model_name == "xgb":
+            return self.boost_xgb(trial)
         else:
-            raise ValueError("Unsupported model. Choose between 'catboost', 'lightgbm', or 'xgboost'.")
+            raise ValueError("Unsupported model. Choose between 'cat', 'lgb', or 'xgb'.")
+
 
     def run_optimization(self):
         # Study for hyperparameter optimization
@@ -104,85 +105,89 @@ class ClassificationHyperTuner:
         print(f"Best AUC: {study.best_value}")
         
         return study.best_params, study.best_value
+    
+    
+    def train_and_evaluate(self, model):
+        # Fit the model and evaluate it on the test set
+        model.fit(self.X_train, 
+                  self.y_train, 
+                #   eval_set=[(self.X_test, self.y_test)],
+                #   early_stopping_rounds=100, 
+                  verbose=False)
+        
+        predictions = model.predict_proba(self.X_test)[:, 1]
+        
+        
+        accuracy = accuracy_score(self.y_test, predictions > 0.5)
+        # auc = roc_auc_score(self.y_test, predictions)
+        return accuracy
+
 
     def boost_cat(self, trial):
         # Define hyperparameters for CatBoost
-        # params = {
-        #     "iterations": 1000,
-        #     "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
-        #     "depth": trial.suggest_int("depth", 1, 10),
-        #     "subsample": trial.suggest_float("subsample", 0.05, 1.0),
-        #     "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.05, 1.0),
-        #     "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
-        # }
-
         params = {
-            "iterations": trial.suggest_int("iterations", 500, 2000),
-            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 0.3, log=True),
-            "depth": trial.suggest_int("depth", 1, 16),
-            "subsample": trial.suggest_float("subsample", 0.5, 1.0),
-            "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.5, 1.0),
-            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 200),
-            "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1e-3, 10.0, log=True),
-            "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Depthwise", "Lossguide"]),
-            "border_count": trial.suggest_int("border_count", 32, 255),
-            "od_type": trial.suggest_categorical("od_type", ["IncToDec", "Iter"]),
+            "iterations": trial.suggest_int("iterations", 1000, 5000),  # Aumentar o número máximo de iterações
+            "learning_rate": trial.suggest_float("learning_rate", 1e-4, 0.2, log=True),  # Ajuste mais fino para LR
+            "depth": trial.suggest_int("depth", 4, 12),  # Foco em valores de profundidade intermediários
+            "subsample": trial.suggest_float("subsample", 0.6, 0.9),  # Evitar extremos como 0.5 ou 1.0
+            "colsample_bylevel": trial.suggest_float("colsample_bylevel", 0.6, 1.0),  # Uso de mais recursos por nível
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 2, 100),  # Ajustado para dados mais densos
+            "l2_leaf_reg": trial.suggest_float("l2_leaf_reg", 1, 10.0, log=True),  # Regularização
+            "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Lossguide"]),  # Evitar o Depthwise
+            "border_count": trial.suggest_int("border_count", 50, 150),  # Limite menor de contagens de borda
+            "od_type": trial.suggest_categorical("od_type", ["Iter", "IncToDec"]),
         }
 
         model = cb.CatBoostClassifier(**params, silent=True)
-        model.fit(self.X_train, self.y_train)
-        predictions = model.predict_proba(self.X_test)[:, 1]
-        auc = roc_auc_score(self.y_test, predictions)
-        return auc
+        return self.train_and_evaluate(model)
 
-    def boost_lightgbm(self, trial):
+
+    def boost_lgb(self, trial):
         # Define hyperparameters for LightGBM
         params = {
             "objective": "binary",
-            "n_estimators": 1000,
-            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),
-            "num_leaves": trial.suggest_int("num_leaves", 2, 1024),
-            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
-            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.05, 1.0),
-            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 1, 100),
+            "n_estimators": trial.suggest_int("n_estimators", 1000, 3000),  # Aumentado o range de estimadores
+            "learning_rate": trial.suggest_float("learning_rate", 1e-3, 0.1, log=True),  # Ajustado para menor LR
+            "num_leaves": trial.suggest_int("num_leaves", 31, 255),  # Valor máximo ajustado para 255, típico para LightGBM
+            "subsample": trial.suggest_float("subsample", 0.7, 0.95),  # Mais conservador na subsample
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.7, 0.9),  # Similarmente ajustado
+            "min_data_in_leaf": trial.suggest_int("min_data_in_leaf", 10, 50),  # Limites ajustados para dados maiores
+            "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 1.0, log=True),  # Regularização L1
+            "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 1.0, log=True),  # Regularização L2
+            "max_bin": trial.suggest_int("max_bin", 100, 300),  # Ajustado para bins maiores
         }
 
         model = lgb.LGBMClassifier(**params)
-        model.fit(self.X_train, self.y_train)
-        predictions = model.predict_proba(self.X_test)[:, 1]
-        auc = roc_auc_score(self.y_test, predictions)
-        return auc
+        return self.train_and_evaluate(model)
 
-    def boost_xg(self, trial):
+
+    def boost_xgb(self, trial):
         # Define hyperparameters for XGBoost
+        params = {
+            "objective": "reg:squarederror",
+            "n_estimators": 100,
+            "verbosity": 0,
+            "learning_rate": trial.suggest_float("learning_rate", 1e-5, 0.1, log=True),
+            "max_depth": trial.suggest_int("max_depth", 1, 10),
+            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
+            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.05, 1.0),
+            "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+        }
         # params = {
         #     'objective': 'binary:logistic',
-        #     'n_estimators': 5000,
-        #     'seed': 42,
-        #     'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.1, log=True),
-        #     'max_depth': trial.suggest_int('max_depth', 1, 10),
-        #     'subsample': trial.suggest_float('subsample', 0.05, 1.0),
-        #     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.05, 1.0),
-        #     'min_child_weight': trial.suggest_int('min_child_weight', 1, 20)
+        #     'n_estimators': trial.suggest_int('n_estimators', 100, 2500),  # Maior número de estimadores
+        #     'learning_rate': trial.suggest_float('learning_rate', 1e-4, 0.1, log=True),  # LR menor para explorações mais estáveis
+        #     'max_depth': trial.suggest_int('max_depth', 4, 10),  # Faixa maior para a profundidade máxima
+        #     'subsample': trial.suggest_float('subsample', 0.6, 0.85),  # Faixa otimizada de subsample
+        #     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 0.9),  # Evitar valores muito extremos
+        #     'min_child_weight': trial.suggest_int('min_child_weight', 1, 20),  # Peso mínimo mais amplo
+        #     'gamma': trial.suggest_float('gamma', 0, 5.0),  # Ajuste para maior controle de regularização
+        #     'lambda': trial.suggest_float('lambda', 1e-3, 1.0, log=True),  # Regularização L2 (lambda)
+        #     'alpha': trial.suggest_float('alpha', 1e-3, 1.0, log=True),  # Regularização L1 (alpha)
         # }
-        
-        params = {
-            'objective': 'binary:logistic',
-            'n_estimators': trial.suggest_int('n_estimators', 100, 1500),
-            'seed': 42,
-            'learning_rate': trial.suggest_float('learning_rate', 1e-3, 0.05, log=True),
-            'max_depth': trial.suggest_int('max_depth', 3, 6),  # Profundidade menor devido às features manuais
-            'subsample': trial.suggest_float('subsample', 0.6, 0.9),
-            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.4, 0.8),
-            'min_child_weight': trial.suggest_int('min_child_weight', 10, 15),
-            # 'early_stopping_rounds': 100
-        }
 
         model = xgb.XGBClassifier(**params)
-        model.fit(self.X_train, self.y_train, verbose=0)
-        predictions = model.predict_proba(self.X_test)[:, 1]
-        auc = roc_auc_score(self.y_test, predictions)
-        return auc
+        return self.train_and_evaluate(model)
 
 
 class TrainingValidation:
@@ -221,7 +226,7 @@ class TrainingValidation:
             'Precision': precision_score(y, predictions, average='weighted', zero_division=0),
             'Recall': recall_score(y, predictions, average='weighted', zero_division=0),
             'F1 Score': f1_score(y, predictions, average='weighted', zero_division=0),
-            'ROC AUC': roc_auc_score(y, predictions_proba[:, 1]),
+            'ROC AUC': roc_auc_score(y, predictions_proba),
             'Matthews Corrcoef': matthews_corrcoef(y, predictions),
             'Cohen Kappa': cohen_kappa_score(y, predictions),
             'Log Loss': log_loss(y, predictions_proba)
@@ -249,7 +254,7 @@ class TrainingValidation:
 
     def normal(self, X, y, oversampling=False):
         self.model.fit(X, y)
-        predictions_proba = self.model.predict_proba(X)
+        predictions_proba = self.model.predict_proba(X)[:, 1]
         predictions = self.model.predict(X)
         
         scores = self.calculate_metrics(y, predictions, predictions_proba)
@@ -263,7 +268,7 @@ class TrainingValidation:
         
         if self.rouc_curve:
 
-            fpr, tpr, _ = roc_curve(y, predictions_proba[:, 1])
+            fpr, tpr, _ = roc_curve(y, predictions_proba)
             roc_auc = auc(fpr, tpr)
             self.plot_roc_curve(fpr, tpr, roc_auc)
 
@@ -274,13 +279,12 @@ class TrainingValidation:
         cv = KFold(n_splits=n_splits, shuffle=True)
         metrics_cross = {key: [] for key in ['Accuracy', 'Precision', 'Recall', 'F1 Score', 'ROC AUC', 
                                              'Matthews Corrcoef', 'Cohen Kappa', 'Log Loss']}
-        confusion_matrices = []
-        roc_auc_scores = []
-        fpr_list = []
-        tpr_list = []
         
         all_predictions = []
         all_true_labels = []
+        fpr_list = []
+        tpr_list = []
+        roc_auc_scores = []
 
         for idx_train, idx_test in cv.split(X, y):
             X_train, X_test = X[idx_train], X[idx_test]
@@ -292,31 +296,26 @@ class TrainingValidation:
 
             self.model.fit(X_train, y_train)
             predictions = self.model.predict(X_test)
-            predict_proba = self.model.predict_proba(X_test)
+            predict_proba = self.model.predict_proba(X_test)[:, 1]
             
             metrics = self.calculate_metrics(y_test, predictions, predict_proba)
             
             for key in metrics_cross.keys():
                 metrics_cross[key].append(metrics[key])
 
-            if self.confusion_matrix:
-                # cm = confusion_matrix(y_test, predictions)
-                # confusion_matrices.append(cm)
-                
-                all_predictions.extend(predictions)
-                all_true_labels.extend(y_test)
+
+            all_predictions.extend(predictions)
+            all_true_labels.extend(y_test)
                 
                 
             if self.rouc_curve:    
-                fpr, tpr, _ = roc_curve(y_test, predict_proba[:, 1])
+                fpr, tpr, _ = roc_curve(y_test, predict_proba)
                 roc_auc = auc(fpr, tpr)
                 roc_auc_scores.append(roc_auc)
                 fpr_list.append(fpr)
                 tpr_list.append(tpr)
 
         if self.confusion_matrix:
-            # final_confusion_matrix = confusion_matrix(all_true_labels, all_predictions)
-            # print("Final Confusion Matrix (All Folds):\n", final_confusion_matrix)
             self.plot_confusion_matrix(np.array(all_true_labels), np.array(all_predictions))
 
 
@@ -325,9 +324,9 @@ class TrainingValidation:
 
 
 
-
-        scores = {key: round(np.mean(val), 2) if key != 'Matthews Corrcoef' and key != 'Cohen Kappa' 
-                  else round(np.mean(val), 2) for key, val in metrics_cross.items()}
+        scores = {key: round(np.mean(val), 2) for key, val in metrics_cross.items()}
+        # scores = {key: round(np.mean(val), 2) if key != 'Matthews Corrcoef' and key != 'Cohen Kappa' 
+        #           else round(np.mean(val), 2) for key, val in metrics_cross.items()}
         scores_df = pd.DataFrame([scores])
         
         return scores_df

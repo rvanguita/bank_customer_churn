@@ -1,5 +1,7 @@
 # Bank Customer Churn
 
+![](assets/img/cape.webp)
+
 ## Introduction
 
 The acquisition of new customers is always associated with a significant financial investment on the part of the company. Therefore, it is essential to avoid losing any customers and to identify the motivations behind their departure. In this project, an analysis of the data from a bank located in Europe was conducted to identify these motivations. Additionally, a machine learning classification model was used to predict which customers are most likely to leave the bank.
@@ -44,14 +46,16 @@ CreditScore, Age, Balance, NumOfProducts, EstimatedSalary, Satisfaction Score, P
 
 
 
-| Model         | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
-|---------------|----------|-----------|--------|----------|---------|-------------------|-------------|----------|
-| normal_xgb    | 97.40    | 97.42     | 97.40  | 97.35    | 99.64   | 0.92              | 0.92        | 11.91    |
-| normal_lgb    | 92.53    | 92.56     | 92.53  | 92.10    | 97.67   | 0.76              | 0.75        | 20.03    |
-| normal_cb     | 91.55    | 91.57     | 91.55  | 90.97    | 95.88   | 0.73              | 0.71        | 22.22    |
-| cross_lgb     | 86.27    | 85.36     | 86.27  | 85.21    | 86.08   | 0.53              | 0.52        | 33.75    |
-| cross_cb      | 86.27    | 85.36     | 86.27  | 85.27    | 86.10   | 0.53              | 0.52        | 33.99    |
-| cross_xgb     | 85.39    | 84.32     | 85.39  | 84.43    | 84.51   | 0.51              | 0.50        | 36.88    |
+| Model        | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
+|--------------|:--------:|:---------:|:------:|:--------:|:-------:|:-----------------:|:-----------:|:--------:|
+| normal_xgb   |  99.99   |   99.99   |  99.99 |  99.99   |  100.00 |        1.00       |     1.00    |  4.06    |
+| normal_lgb   |  99.39   |   99.39   |  99.39 |  99.38   |  99.98  |        0.98       |     0.98    |  9.58    |
+| normal_cb    |  98.25   |   98.28   |  98.25 |  98.23   |  99.81  |        0.95       |     0.94    |  10.07   |
+| cross_lgb    |  85.84   |   84.88   |  85.84 |  84.91   |  85.47  |        0.52       |     0.51    |  35.47   |
+| cross_cb     |  85.63   |   84.66   |  85.63 |  84.68   |  84.80  |        0.51       |     0.50    |  36.66   |
+| cross_xgb    |  85.46   |   84.43   |  85.46 |  84.51   |  84.00  |        0.51       |     0.50    |  41.93   |
+
+
 
 
 ![](assets/img/7.png)
