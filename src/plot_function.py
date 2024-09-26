@@ -20,11 +20,14 @@ from sklearn.metrics import (
 from sklearn.metrics import confusion_matrix
 
 class ShapPlot:
-    def __init__(self, model, X_test, df_feature, features_drop):
+    def __init__(self, model, X_test, df_feature, features_drop=None):
         self.model = model
         self.X_test = X_test
-        self.features_drop = features_drop
-        self.feature_names = df_feature.drop(self.features_drop, axis=1).columns
+        
+        self.feature_names = df_feature.columns
+        if features_drop:
+            self.feature_names = df_feature.drop(features_drop, axis=1).columns
+            
         self.explainer = shap.Explainer(self.model)  # Reutiliza o explainer para consistência
         
     def first_analysis(self, extension=False):
