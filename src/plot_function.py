@@ -78,7 +78,7 @@ class ShapPlot:
 
 
 class ClassificationHyperTuner:
-    def __init__(self, X_train, y_train, X_test, y_test, n_trials=30, model_name=None):
+    def __init__(self, X_train, y_train, X_test, y_test, n_trials=100, model_name=None):
         # Initialize data and configuration
         self.X_train = X_train
         self.y_train = y_train
@@ -116,7 +116,8 @@ class ClassificationHyperTuner:
                   self.y_train, 
                 #   eval_set=[(self.X_test, self.y_test)],
                 #   early_stopping_rounds=100, 
-                  verbose=False)
+                #   verbose=False
+                  )
         
         predictions = model.predict_proba(self.X_test)[:, 1]
         
@@ -139,6 +140,7 @@ class ClassificationHyperTuner:
             "grow_policy": trial.suggest_categorical("grow_policy", ["SymmetricTree", "Lossguide"]),  # Evitar o Depthwise
             "border_count": trial.suggest_int("border_count", 50, 150),  # Limite menor de contagens de borda
             "od_type": trial.suggest_categorical("od_type", ["Iter", "IncToDec"]),
+            # "verbose": False
         }
 
         model = cb.CatBoostClassifier(**params, silent=True)
@@ -158,6 +160,7 @@ class ClassificationHyperTuner:
             "reg_alpha": trial.suggest_float("reg_alpha", 1e-3, 1.0, log=True),  # Regularização L1
             "reg_lambda": trial.suggest_float("reg_lambda", 1e-3, 1.0, log=True),  # Regularização L2
             "max_bin": trial.suggest_int("max_bin", 100, 300),  # Ajustado para bins maiores
+            # "verbose": 0
         }
 
         model = lgb.LGBMClassifier(**params)
@@ -167,27 +170,18 @@ class ClassificationHyperTuner:
     def boost_xgb(self, trial):
         # Define hyperparameters for XGBoost
         params = {
-            "objective": "reg:squarederror",
-            "n_estimators": 100,
-            "verbosity": 0,
-            "learning_rate": trial.suggest_float("learning_rate", 1e-5, 0.1, log=True),
-            "max_depth": trial.suggest_int("max_depth", 1, 10),
-            "subsample": trial.suggest_float("subsample", 0.05, 1.0),
-            "colsample_bytree": trial.suggest_float("colsample_bytree", 0.05, 1.0),
-            "min_child_weight": trial.suggest_int("min_child_weight", 1, 20),
+            'objective': 'binary:logistic',
+            'n_estimators': trial.suggest_int('n_estimators', 100, 2500),  # Maior número de estimadores
+            'learning_rate': trial.suggest_float('learning_rate', 1e-4, 0.1, log=True),  # LR menor para explorações mais estáveis
+            'max_depth': trial.suggest_int('max_depth', 4, 10),  # Faixa maior para a profundidade máxima
+            'subsample': trial.suggest_float('subsample', 0.6, 0.85),  # Faixa otimizada de subsample
+            'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 0.9),  # Evitar valores muito extremos
+            'min_child_weight': trial.suggest_int('min_child_weight', 1, 20),  # Peso mínimo mais amplo
+            'gamma': trial.suggest_float('gamma', 0, 5.0),  # Ajuste para maior controle de regularização
+            'lambda': trial.suggest_float('lambda', 1e-3, 1.0, log=True),  # Regularização L2 (lambda)
+            'alpha': trial.suggest_float('alpha', 1e-3, 1.0, log=True),  # Regularização L1 (alpha)
+            "verbose" : False
         }
-        # params = {
-        #     'objective': 'binary:logistic',
-        #     'n_estimators': trial.suggest_int('n_estimators', 100, 2500),  # Maior número de estimadores
-        #     'learning_rate': trial.suggest_float('learning_rate', 1e-4, 0.1, log=True),  # LR menor para explorações mais estáveis
-        #     'max_depth': trial.suggest_int('max_depth', 4, 10),  # Faixa maior para a profundidade máxima
-        #     'subsample': trial.suggest_float('subsample', 0.6, 0.85),  # Faixa otimizada de subsample
-        #     'colsample_bytree': trial.suggest_float('colsample_bytree', 0.7, 0.9),  # Evitar valores muito extremos
-        #     'min_child_weight': trial.suggest_int('min_child_weight', 1, 20),  # Peso mínimo mais amplo
-        #     'gamma': trial.suggest_float('gamma', 0, 5.0),  # Ajuste para maior controle de regularização
-        #     'lambda': trial.suggest_float('lambda', 1e-3, 1.0, log=True),  # Regularização L2 (lambda)
-        #     'alpha': trial.suggest_float('alpha', 1e-3, 1.0, log=True),  # Regularização L1 (alpha)
-        # }
 
         model = xgb.XGBClassifier(**params)
         return self.train_and_evaluate(model)
