@@ -51,31 +51,38 @@ Additionally, the StandardScaler was applied to the following columns: 'CreditSc
 
 At the end of this process, I obtained a DataFrame with the following columns: 'AgeGroup', 'BalanceCategory', 'Age', 'Balance', 'Age^2', 'Age Balance', 'Balance^2', 'CreditScore','EstimatedSalary', 'Point Earned', 'Card_Type_OrdinalEncoder', 'BalanceCategory_Encoded', 'AgeGroup_Encoded', 'Gender_Male', 'NumOfProducts_2', 'NumOfProducts_3', 'NumOfProducts_4', 'HasCrCard_1', 'IsActiveMember_1', 'Satisfaction Score_2', 'Satisfaction Score_3', 'Satisfaction Score_4', 'Satisfaction Score_5', 'Geography_Germany', 'Geography_Spain'.
 
-With the DataFrame data prepared, the classification models CatBoost, LightGBM, and XGBoost were applied. For each model, a simplified optimization of their hyperparameters was performed, as more detailed adjustments or deeper searches resulted in overfitting and worsened the validation parameters. The table below presents the results of this analysis, where each model was tested using the data split into training and testing sets with the train_test_split function, as well as cross-validation using the KFold function.
+With the DataFrame data prepared, the classification models CatBoost, LightGBM, and XGBoost were applied. For each model, a simplified optimization of their hyperparameters was performed, as more detailed adjustments or deeper searches resulted in overfitting and worsened the validation parameters. The table below presents the results of the analysis, where each model was evaluated using data splitting into training and test sets with the train_test_split function, as well as cross-validation with the KFold function. The table is sorted in descending order based on the Log Loss metric.
 
-As can be seen, all three models demonstrated excellent performance, coming close to accurately predicting all outcomes, making cross-validation unnecessary. However, since this dataset lacks much information about its origin, it is possible that it contains some bias, as real-world problems rarely allow for this level of precision to be achieved so easily. Continuing with the analysis, the XGBoost model achieved the best results across both common metrics such as Accuracy, Precision, Recall, F1 Score, and ROC AUC, as well as less commonly used metrics like Matthews Corrcoef, Cohen Kappa, and Log Loss. In particular, Matthews Corrcoef and Cohen Kappa reached their maximum values, while Log Loss was extremely close to 0.
 
-| Model        | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
-|:-------------|:--------:|:---------:|:------:|:--------:|:-------:|:-----------------:|:-----------:|:--------:|
-| normal_xgb   |  99.99   |   99.99   |  99.99 |  99.99   |  100.00 |        1.00       |     1.00    |  3.89    |
-| normal_lgb   |  99.33   |   99.34   |  99.33 |  99.33   |  99.98  |        0.98       |     0.98    |  9.60    |
-| normal_cb    |  98.01   |   98.05   |  98.01 |  97.98   |  99.77  |        0.94       |     0.94    |  10.20   |
-| cross_cb     |  85.98   |   85.07   |  85.98 |  84.98   |  85.43  |        0.53       |     0.51    |  35.72   |
-| cross_lgb    |  85.72   |   84.69   |  85.72 |  84.64   |  85.42  |        0.51       |     0.50    |  36.07   |
-| cross_xgb    |  85.45   |   84.51   |  85.45 |  84.53   |  83.76  |        0.51       |     0.50    |  42.26   |
+| Model        | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef  | Cohen Kappa | Log Loss |
+|:-------------|:--------:|:---------:|:------:|:--------:|:-------:|:------------------:|:-----------:|:--------:|
+| normal_lgb   |  94.60   |   94.62   |  94.60 |  94.39   |  99.02  |        0.83        |     0.82    |  16.96   |
+| normal_cb    |  89.35   |   89.12   |  89.35 |  88.47   |  93.42  |        0.65        |     0.63    |  26.05   |
+| normal_xgb   |  89.45   |   89.15   |  89.45 |  88.68   |  92.73  |        0.65        |     0.63    |  26.70   |
+| cross_xgb    |  86.57   |   85.75   |  86.57 |  85.43   |  86.81  |        0.54        |     0.53    |  33.21   |
+| cross_cb     |  86.59   |   85.78   |  86.59 |  85.44   |  86.95  |        0.54        |     0.53    |  32.95   |
+| cross_lgb    |  86.12   |   85.17   |  86.12 |  84.98   |  85.91  |        0.53        |     0.51    |  34.31   |
 
-To demonstrate how close to perfection the results of this model were, below are the confusion matrix and the ROC curve, both tested with the test data. It is evident that this model is well-trained, achieving an almost perfect performance. Below these two items, we can also observe a table with the validation results of the system, showing the best possible values.
+
+
+The best-performing method was normal_lgb, but due to its high accuracy, there are indications that it might be overfitting. Therefore, the second-best method was chosen instead.
+
+When analyzing the normal_cb and normal_xgb models, we observed that both produced very similar results, with normal_cb achieving a slightly lower Log Loss compared to normal_xgb. However, when comparing the other metrics — Accuracy, Precision, Recall, and F1 Score — the normal_xgb method outperformed its competitor.
+
+Thus, the selected method was normal_xgb, considering that the difference in Log Loss between it and normal_cb was minimal, and that out of the eight evaluated metrics, it outperformed in four, while the remaining four showed very similar or identical values.
+
+With the selected model, the simulation was performed using the test data. Below are the confusion matrix and the ROC curve. A table with the system's validation results is also presented. The data shows that the application of this method to the problem at hand yields good metrics, particularly: Accuracy, Precision, Recall, F1 Score, ROC AUC, and the ROC curve, all with values close to 90. The Matthews Corrcoef and Cohen Kappa metrics also showed significant results, with values above 0.6, while Log Loss was very close to zero.
+
 
 ![](assets/img/7.png)
 
 
 ![](assets/img/8.png)
 
+
 | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
 |:--------:|:---------:|:------:|:--------:|:-------:|:-----------------:|:-----------:|:--------:|
-|  100.0   |   100.0   |  100.0 |   100.0  |  100.0  |        1.0        |     1.0     |  1.08    |
-
-
+|  89.84   |   89.51   |  89.84 |   89.11  |  93.05  |       0.66        |     0.64    |  26.08   |
 
 
 To extract more information from this analysis, the SHAP library was used to identify which features had the greatest impact on the model's predictions. As noted earlier, age had a significant impact on customer classification, with older individuals showing greater differentiation. Another factor that had not been highlighted was the presence of customers who have product number 2. Since this table is binary and there is a large predominance of people who have this product and have not churned, this information becomes relevant.
