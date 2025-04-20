@@ -49,29 +49,37 @@ By analyzing the data, a possible trend was identified between age, balance, and
 
 Additionally, the StandardScaler was applied to the following columns: 'CreditScore', 'Balance', 'EstimatedSalary', and 'Point Earned'. Finally, the OneHotEncoder was used for the columns: 'Gender', 'NumOfProducts', 'HasCrCard', 'IsActiveMember', 'Satisfaction Score', and 'Geography'.
 
-At the end of this process, I obtained a DataFrame with the following columns: 'AgeGroup', 'BalanceCategory', 'Age', 'Balance', 'Age^2', 'Age Balance', 'Balance^2', 'CreditScore','EstimatedSalary', 'Point Earned', 'Card_Type_OrdinalEncoder', 'BalanceCategory_Encoded', 'AgeGroup_Encoded', 'Gender_Male', 'NumOfProducts_2', 'NumOfProducts_3', 'NumOfProducts_4', 'HasCrCard_1', 'IsActiveMember_1', 'Satisfaction Score_2', 'Satisfaction Score_3', 'Satisfaction Score_4', 'Satisfaction Score_5', 'Geography_Germany', 'Geography_Spain'.
+At the end of this process, I obtained a DataFrame with the following columns: 'Age_poly', 'Balance_poly', 'Age^2_poly', 'Age Balance_poly', 'Balance^2_poly', 'CreditScore_StandardScaler', 'Balance_StandardScaler', 'EstimatedSalary_StandardScaler', 'Point Earned_StandardScaler', 'Card_Type_OrdinalEncoder', 'BalanceCategory_Encoded', 'AgeGroup_Encoded', 'Gender_Male','NumOfProducts_2', 'NumOfProducts_3', 'NumOfProducts_4', 'HasCrCard_1', 'IsActiveMember_1', 'Satisfaction Score_2', 'Satisfaction Score_3', 'Satisfaction Score_4', 'Satisfaction Score_5', 'Geography_Germany', 'Geography_Spain'.
+
+With the definition of the columns to be used and the proper data preprocessing, it became feasible to analyze the correlation among the dataset variables. The figure below illustrates this correlation, implemented using the Pearson correlation coefficient, and visualized through a heatmap. When examining the row corresponding to the target variable Exited, it is noticeable that some variables exhibit a positive correlation (such as Age^2) while others show a negative correlation, such as AgeGroup_Encoded. These variables demonstrate potential relevance in identifying patterns associated with customer churn, indicating that they may have a significant impact on the performance of machine learning models for churn prediction.
+
+![](assets/img/11.png)
 
 With the DataFrame data prepared, the classification models CatBoost, LightGBM, and XGBoost were applied. For each model, a simplified optimization of their hyperparameters was performed, as more detailed adjustments or deeper searches resulted in overfitting and worsened the validation parameters. The table below presents the results of the analysis, where each model was evaluated using data splitting into training and test sets with the train_test_split function, as well as cross-validation with the KFold function. The table is sorted in descending order based on the Log Loss metric.
 
 
 | Model        | Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef  | Cohen Kappa | Log Loss |
 |:-------------|:--------:|:---------:|:------:|:--------:|:-------:|:------------------:|:-----------:|:--------:|
-| normal_lgb   |  94.60   |   94.62   |  94.60 |  94.39   |  99.02  |        0.83        |     0.82    |  16.96   |
-| normal_cb    |  89.35   |   89.12   |  89.35 |  88.47   |  93.42  |        0.65        |     0.63    |  26.05   |
-| normal_xgb   |  89.45   |   89.15   |  89.45 |  88.68   |  92.73  |        0.65        |     0.63    |  26.70   |
 | cross_xgb    |  86.57   |   85.75   |  86.57 |  85.43   |  86.81  |        0.54        |     0.53    |  33.21   |
 | cross_cb     |  86.59   |   85.78   |  86.59 |  85.44   |  86.95  |        0.54        |     0.53    |  32.95   |
 | cross_lgb    |  86.12   |   85.17   |  86.12 |  84.98   |  85.91  |        0.53        |     0.51    |  34.31   |
 
 
+None of the evaluated models demonstrated clear superiority across all aspects. However, when considering the metric values exclusively, the CatBoost model stands out as the most logical choice, mainly due to its superior performance in ROC AUC and Log Loss.
 
-The best-performing method was normal_lgb, but due to its high accuracy, there are indications that it might be overfitting. Therefore, the second-best method was chosen instead.
+Despite this, CatBoost's execution time was approximately five times longer than that of XGBoost, representing a significant drawback in production scenarios. Considering that the XGBoost model achieved very similar performance metrics to those of CatBoost but with greater computational efficiency, it was selected as the final model for deployment. This decision aims to ensure a balance between predictive performance and operational feasibility in production environments.
 
-When analyzing the normal_cb and normal_xgb models, we observed that both produced very similar results, with normal_cb achieving a slightly lower Log Loss compared to normal_xgb. However, when comparing the other metrics — Accuracy, Precision, Recall, and F1 Score — the normal_xgb method outperformed its competitor.
 
-Thus, the selected method was normal_xgb, considering that the difference in Log Loss between it and normal_cb was minimal, and that out of the eight evaluated metrics, it outperformed in four, while the remaining four showed very similar or identical values.
+With the selected model, the simulation was carried out using the test dataset. Below, the confusion matrix and the ROC curve are presented, along with a table containing the system's validation metric results.
 
-With the selected model, the simulation was performed using the test data. Below are the confusion matrix and the ROC curve. A table with the system's validation results is also presented. The data shows that the application of this method to the problem at hand yields good metrics, particularly: Accuracy, Precision, Recall, F1 Score, ROC AUC, and the ROC curve, all with values close to 90. The Matthews Corrcoef and Cohen Kappa metrics also showed significant results, with values above 0.6, while Log Loss was very close to zero.
+The results indicate that applying this method to the proposed problem yields consistent performance, with standout metrics such as Accuracy, Precision, Recall, F1 Score, and ROC AUC, all with values close to 90%. The ROC curve also highlights the model’s strong discriminative capability.
+
+Additionally, the Matthews Correlation Coefficient (MCC) and Cohen’s Kappa metrics presented values above 0.6, reinforcing the robustness of the model in evaluating both balanced and imbalanced classifications. Finally, the Log Loss metric showed a very low value, indicating high confidence in the model’s predictions.
+
+
+| Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
+|:--------:|:---------:|:------:|:--------:|:-------:|:-----------------:|:-----------:|:--------:|
+|  90.43   |   90.16   |  90.43 |   89.75  |  93.63  |       0.67        |     0.66    |  24.91   |
 
 
 ![](assets/img/7.png)
@@ -80,12 +88,10 @@ With the selected model, the simulation was performed using the test data. Below
 ![](assets/img/8.png)
 
 
-| Accuracy | Precision | Recall | F1 Score | ROC AUC | Matthews Corrcoef | Cohen Kappa | Log Loss |
-|:--------:|:---------:|:------:|:--------:|:-------:|:-----------------:|:-----------:|:--------:|
-|  89.84   |   89.51   |  89.84 |   89.11  |  93.05  |       0.66        |     0.64    |  26.08   |
 
+To deepen the analysis and interpret the model results, the SHAP (SHapley Additive exPlanations) library was used to identify the variables with the greatest impact on the predictions. As previously highlighted, the variable age showed significant influence in customer classification, especially among individuals in older age groups, who exhibited a greater distinction regarding churn.
 
-To extract more information from this analysis, the SHAP library was used to identify which features had the greatest impact on the model's predictions. As noted earlier, age had a significant impact on customer classification, with older individuals showing greater differentiation. Another factor that had not been highlighted was the presence of customers who have product number 2. Since this table is binary and there is a large predominance of people who have this product and have not churned, this information becomes relevant.
+Additionally, the SHAP analysis revealed an extra factor that had not been previously emphasized: the presence of customers with a number of products equal to 2. Since this variable is represented in binary form, and there is a considerable predominance of customers with this value who did not leave the bank, this attribute becomes significantly relevant in explaining the model’s predictive behavior.
 
 ![](assets/img/9.png)
 
@@ -94,6 +100,10 @@ To extract more information from this analysis, the SHAP library was used to ide
 
 ## Conclusion
 
-This work aimed to implement an analysis on the database of a European bank, with the purpose of training a machine learning model to predict which customers will leave the institution and to identify the possible factors contributing to this decision. Early in the project, a glaring issue was identified: all customers who made complaints ended up leaving the company. From the perspective of this study, this column presented a significant bias, as it made it easy to identify customers who were likely to churn. Therefore, this data was excluded from the analysis. Additionally, it is recommended that the company invest in a more in-depth analysis across all departments related to problem resolution to investigate what those problems might be.
+This study aimed to analyze the dataset of a European banking institution with the purpose of training a machine learning model capable of predicting which customers are likely to leave the company (churn) and identifying the possible factors that contribute to this decision.
 
-After processing the data, a DataFrame was created with the information described in the methodology, and six tests were conducted. The results obtained are nearly perfect, in contrast to the issues often encountered in the real world. It is possible that the creator of this dataset introduced some bias, resulting in models with performance so close to perfection. With these caveats in mind, XGBoost showed the best results across all evaluated parameters. At the end of this project, it was also possible to identify which features were most relevant for classification.
+Early in the project, a critical issue was identified: all customers who had submitted complaints ended up terminating their relationship with the bank. From an analytical standpoint, this variable introduced a significant bias, disproportionately simplifying the identification of customers prone to churn. For this reason, this column was excluded from the analysis. Furthermore, it is recommended that the institution conduct a deeper investigation within the departments responsible for customer service and issue resolution to better understand the underlying causes of these complaints.
+
+After data preprocessing, a DataFrame was created as described in the methodology, and six validation experiments were conducted. The results obtained showed exceptionally high metrics, which contrasts with the challenges commonly observed in real-world scenarios. This raises the hypothesis that the dataset creator may have introduced some form of bias, resulting in models with near-perfect performance.
+
+Given this context, the XGBoost model was selected for the production phase, as it achieved evaluation metrics very close to the best-performing model (CatBoost), but with a significantly lower execution time, making it more suitable for deployment in production environments. At the end of the project, interpretability techniques also made it possible to identify the variables with the greatest impact on customer classification.
