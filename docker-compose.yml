@@ -1,0 +1,13 @@
+services:
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.mlflow
+    container_name: mlflow
+    restart: always
+    ports:
+      - "5000:5000"
+    command: mlflow server --host 0.0.0.0
+    volumes:
+      - ./mlflow_data/mlruns:/mlruns
+      - ./mlflow_data/mlartifacts:/mlartifacts

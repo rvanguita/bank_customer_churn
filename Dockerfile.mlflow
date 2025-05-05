@@ -1,0 +1,5 @@
+FROM ghcr.io/mlflow/mlflow
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+ENTRYPOINT ["/entrypoint.sh"]
+USER 1000:1000

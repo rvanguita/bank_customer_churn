@@ -1,0 +1,240 @@
+import matplotlib.pyplot as plt
+import pandas as pd
+import numpy as np
+import seaborn as sns
+from tqdm import tqdm
+from typing import List, Optional, Tuple, Union
+
+
+class DataDistributionVisualizer:
+    def __init__(self, dataframe: pd.DataFrame, color: str = '#c3e88d', figsize: Tuple[int, int] = (24, 12), title: str = ''):
+        self.dataframe = dataframe
+        self.color = color
+        self.figsize = figsize
+        self.title = title
+
+    def _hide_spines(self, ax: plt.Axes, hide: bool = True) -> None:
+        if hide:
+            for spine in ax.spines.values():
+                spine.set_visible(False)
+
+    def _annotate_bar(self, ax: plt.Axes, bar: plt.Rectangle, label: str, offset: int = 15, fontsize: int = 10, va: str = 'bottom') -> None:
+        height = bar.get_height()
+        ax.annotate(label, (bar.get_x() + bar.get_width() / 2.0, height), ha='center', va=va,
+                    xytext=(0, offset), textcoords='offset points', fontsize=fontsize)
+
+    def _get_grid_shape(self, total_items: int) -> Tuple[int, int]:
+        rows = (total_items + 2) // 3
+        cols = min(3, total_items)
+        return rows, cols
+
+    def _style_axis(self, ax: plt.Axes, hide_all: bool = False) -> None:
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        if hide_all:
+            ax.spines['left'].set_visible(False)
+            ax.spines['bottom'].set_visible(False)
+        ax.grid(False)
+
+    def _remove_unused_axes(self, axes: List[plt.Axes], used_count: int) -> None:
+        for idx in range(used_count, len(axes)):
+            plt.delaxes(axes[idx])
+
+    def _default_plot_style(self, ax: plt.Axes, title: str = '') -> None:
+        ax.set_title(title or self.title, fontweight='bold', fontsize=13, pad=15, loc='center')
+        ax.set_xlabel('')
+        ax.tick_params(axis='both', which='both', length=0)
+        ax.yaxis.set_visible(False)
+        self._hide_spines(ax)
+
+    def get_category_stats(self, category: str) -> pd.DataFrame:
+        counts = self.dataframe[category].value_counts().reset_index(name='count')
+        counts.rename(columns={'index': category}, inplace=True)
+        counts['percentage'] = counts['count'] / len(self.dataframe) * 100
+        return counts
+
+    def plot_category_distribution(self, category_col: str, palette: Optional[Union[str, List[str]]] = None,
+                                   sort: bool = True, show_pct: bool = True, show_count: bool = True) -> None:
+        stats = self.get_category_stats(category_col)
+        if sort:
+            stats[category_col] = pd.Categorical(
+                stats[category_col],
+                categories=stats.sort_values("percentage", ascending=False)[category_col]
+            )
+        plt.figure(figsize=self.figsize)
+        ax = sns.barplot(
+            data=stats,
+            x=category_col,
+            y="percentage",
+            hue=category_col,
+            palette=palette,
+            order=stats[category_col],
+            legend=False,
+        )
+        self._default_plot_style(ax)
+        for bar, (_, row) in zip(ax.patches, stats.iterrows()):
+            if show_pct:
+                self._annotate_bar(ax, bar, f'{row["percentage"]:.2f}%', offset=20, fontsize=10, va="top")
+            if show_count:
+                self._annotate_bar(ax, bar, f'({int(row["count"]):,})', offset=10, fontsize=9, va="top")
+        plt.tight_layout()
+
+    def plot_donut_chart(self, category_col: str, palette: Optional[List[str]] = None, show_pct: bool = True,
+                         show_count: bool = True, inner_radius: float = 0.7, fontsize: int = 10) -> None:
+        stats = self.get_category_stats(category_col)
+        fig, ax = plt.subplots(figsize=self.figsize)
+        wedges, _ = ax.pie(
+            stats["percentage"],
+            labels=stats[category_col],
+            colors=palette,
+            wedgeprops={"linewidth": 7, "edgecolor": "white"}
+        )
+        circle = plt.Circle((0, 0), inner_radius, fc="white")
+        ax.add_artist(circle)
+        ax.set_title(self.title, fontweight="bold", fontsize=13, pad=15, loc="center")
+        for i, wedge in enumerate(wedges):
+            angle = (wedge.theta1 + wedge.theta2) / 2
+            x = np.cos(np.radians(angle)) * 0.5
+            y = np.sin(np.radians(angle)) * 0.5
+            label = "\n".join(filter(None, [
+                f"{stats['percentage'].iloc[i]:.1f}%" if show_pct else "",
+                f"({int(stats['count'].iloc[i]):,})" if show_count else ""
+            ]))
+            ax.text(x, y, label, ha="center", va="center", fontsize=fontsize, color="black")
+        ax.axis("equal")
+        plt.tight_layout()
+        plt.show()
+
+    def plot_horizontal_feature_bars(self, feature_cols: List[str], group_col: Optional[str] = None,
+                                     palette: Optional[Union[str, List[str]]] = None) -> None:
+        rows, cols = self._get_grid_shape(len(feature_cols))
+        fig, axes = plt.subplots(rows, cols, figsize=self.figsize)
+        axes = np.ravel(axes) if isinstance(axes, np.ndarray) else [axes]
+
+        for i, feature in tqdm(enumerate(feature_cols), total=len(feature_cols), desc="Plotting horizontal bars"):
+            ax = axes[i]
+            grouped = self.dataframe.groupby([feature, group_col]).size().reset_index(name="count")
+            total = grouped["count"].sum()
+            grouped["percentage"] = grouped["count"] / total * 100
+            width = 0.8 if self.dataframe[feature].nunique() <= 5 else 0.6
+
+            sns.barplot(
+                data=grouped,
+                x="count",
+                y=feature,
+                hue=group_col,
+                palette=palette,
+                ax=ax,
+                width=width,
+                orient="h",
+            )
+            self._default_plot_style(ax, title=feature)
+            ax.set_ylabel("")
+            ax.xaxis.set_visible(False)
+            ax.legend(loc="upper right", bbox_to_anchor=(1.1, 1.1))
+
+            for bar in ax.patches:
+                val = bar.get_width()
+                pct = (val / total) * 100
+                if pct > 0:
+                    ax.annotate(
+                        f"{pct:.1f}%",
+                        (val, bar.get_y() + bar.get_height() / 2),
+                        xytext=(5, 0),
+                        textcoords="offset points",
+                        ha="left",
+                        va="center",
+                        fontsize=11,
+                        color="black",
+                        fontweight="bold",
+                    )
+
+        self._remove_unused_axes(axes, len(feature_cols))
+        plt.tight_layout()
+
+    def plot_feature_boxplots(self, feature_cols: List[str], group_col: Optional[str] = None,
+                              palette: Optional[Union[str, List[str]]] = None) -> None:
+        rows, cols = self._get_grid_shape(len(feature_cols))
+        fig, axes = plt.subplots(rows, cols, figsize=self.figsize)
+        axes = np.ravel(axes) if isinstance(axes, np.ndarray) else [axes]
+
+        for i, feature in tqdm(enumerate(feature_cols), total=len(feature_cols), desc="Plotting boxplots"):
+            ax = axes[i]
+            if group_col:
+                sns.boxplot(
+                    data=self.dataframe,
+                    x=feature,
+                    y=group_col,
+                    hue=group_col,
+                    palette=palette,
+                    orient="h",
+                    ax=ax,
+                    showfliers=True
+                )
+                
+                ax.set_ylabel("")
+            else:
+                sns.boxplot(
+                    data=self.dataframe,
+                    x=feature,
+                    color=self.color,
+                    orient="h",
+                    ax=ax,
+                    showfliers=True
+                )
+                ax.yaxis.set_visible(False)
+
+            self._default_plot_style(ax, title=feature)
+
+        self._remove_unused_axes(axes, len(feature_cols))
+        plt.tight_layout()
+
+    def plot_feature_histograms(self, feature_cols: List[str], group_col: Optional[str] = None,
+                                palette: Optional[Union[str, List[str]]] = None, kde: bool = False,
+                                stat = "proportion") -> None:
+        rows, cols = self._get_grid_shape(len(feature_cols))
+        fig, axes = plt.subplots(rows, cols, figsize=self.figsize)
+        axes = np.ravel(axes) if isinstance(axes, np.ndarray) else [axes]
+
+        for i, feature in tqdm(enumerate(feature_cols), total=len(feature_cols), desc="Plotting histograms"):
+            ax = axes[i]
+            sns.histplot(
+                data=self.dataframe,
+                x=feature,
+                hue=group_col,
+                palette=palette,
+                kde=kde,
+                ax=ax,
+                stat=stat,
+            )
+            self._default_plot_style(ax, title=feature)
+
+        self._remove_unused_axes(axes, len(feature_cols))
+        plt.tight_layout()
+
+    def plot_scatter(self, x_col: str, y_col: str, group_col: Optional[str] = None,
+                     palette: Optional[Union[str, List[str]]] = None,
+                     title_fontsize: int = 16, label_fontsize: int = 14) -> None:
+        plt.figure(figsize=self.figsize)
+        sns.scatterplot(
+            data=self.dataframe,
+            x=x_col,
+            y=y_col,
+            hue=group_col,
+            palette=palette,
+            alpha=0.6,
+        )
+        plt.title(f"{x_col} vs {y_col}", fontsize=title_fontsize, weight="bold")
+        plt.xlabel(x_col, fontsize=label_fontsize)
+        plt.ylabel(y_col, fontsize=label_fontsize)
+
+        ax = plt.gca()
+        self._style_axis(ax, hide_all=True)
+
+        legend = ax.get_legend()
+        if legend and group_col:
+            legend.set_title(group_col)
+            legend.set_bbox_to_anchor((1.15, 0.8))
+
+        plt.tight_layout()
+        plt.show()
