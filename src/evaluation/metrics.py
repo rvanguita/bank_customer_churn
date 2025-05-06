@@ -30,46 +30,43 @@ class ClassifierMetricsEvaluator:
         return X, np.asarray(y).ravel()
 
 
-    # def _compute_metrics(self, y_true: np.ndarray, y_pred: np.ndarray, y_proba: np.ndarray) -> dict:
-    #     n_classes = y_proba.shape[1] if y_proba.ndim > 1 else 1
-    #     is_multiclass = n_classes > 2
+    def _compute_metrics(self, y_true: np.ndarray, y_pred: np.ndarray, y_proba: np.ndarray) -> dict:
+        n_classes = y_proba.shape[1] if y_proba.ndim > 1 else 1
+        is_multiclass = n_classes > 2
 
-    #     results = {
-    #         "Accuracy": accuracy_score(y_true, y_pred),
-    #         "Precision": precision_score(y_true, y_pred, average="macro", zero_division=0),
-    #         "Recall": recall_score(y_true, y_pred, average="macro", zero_division=0),
-    #         "F1 Score": f1_score(y_true, y_pred, average="macro", zero_division=0),
-    #         "Matthews Corrcoef": matthews_corrcoef(y_true, y_pred),
-    #         "Cohen Kappa": cohen_kappa_score(y_true, y_pred),
-    #     }
+        results = {
+            "accuracy": float(accuracy_score(y_true, y_pred)),
+            "precision_macro": float(precision_score(y_true, y_pred, average="macro", zero_division=0)),
+            "recall_macro": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
+            "f1_macro": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
+            "matthews_corrcoef": float(matthews_corrcoef(y_true, y_pred)),
+            "cohen_kappa": float(cohen_kappa_score(y_true, y_pred)),
+        }
 
-    #     if is_multiclass:
-    #         y_true_bin = label_binarize(y_true, classes=np.arange(n_classes))
-    #         brier = np.mean(np.array([
-    #             brier_score_loss(y_true_bin[:, i], y_proba[:, i])
-    #             for i in range(n_classes)
-    #         ]))
-    #     else:
-    #         y_proba_bin = y_proba[:, 1] if y_proba.ndim > 1 else y_proba
-    #         brier = brier_score_loss(y_true, y_proba_bin)
+        if is_multiclass:
+            y_true_bin = label_binarize(y_true, classes=np.arange(n_classes))
+            brier = np.mean([
+                brier_score_loss(y_true_bin[:, i], y_proba[:, i])
+                for i in range(n_classes)
+            ])
+        else:
+            y_proba_bin = y_proba[:, 1] if y_proba.ndim > 1 else y_proba
+            brier = brier_score_loss(y_true, y_proba_bin)
 
-    #     results["Brier Score"] = brier
-    #     results["Log Loss"] = log_loss(y_true, y_proba)
+        results["brier_score"] = float(brier)
+        results["log_loss"] = float(log_loss(y_true, y_proba))
 
-    #     try:
-    #         if is_multiclass:
-    #             results["ROC AUC"] = roc_auc_score(y_true, y_proba, multi_class="ovr", average="macro")
-    #         else:
-    #             results["ROC AUC"] = roc_auc_score(y_true, y_proba[:, 1] if y_proba.ndim > 1 else y_proba)
-    #     except Exception:
-    #         results["ROC AUC"] = np.nan
+        try:
+            if is_multiclass:
+                results["roc_auc"] = float(roc_auc_score(y_true, y_proba, multi_class="ovr", average="macro"))
+            else:
+                results["roc_auc"] = float(roc_auc_score(y_true, y_proba[:, 1] if y_proba.ndim > 1 else y_proba))
+        except Exception:
+            results["roc_auc"] = float("nan")
 
-    #     return {
-    #         k: round(v * 100, 2) if k not in {"Matthews Corrcoef", "Cohen Kappa", "Brier Score"} else round(v, 2)
-    #         for k, v in results.items()
-    #     }
-
-
+        return results
+    
+    
     def evaluate_fit(self, X: Union[pd.DataFrame, np.ndarray], y: Union[pd.Series, np.ndarray], predict_proba: bool = True):
         X, y = self._validate_inputs(X, y)
         self.model.fit(X, y)
@@ -153,45 +150,7 @@ class ClassifierMetricsEvaluator:
         metrics = self._compute_metrics(y, y_pred, y_proba)
         return pd.DataFrame([metrics]), X, y, y_pred, y_proba
     
-    
-    def _compute_metrics(self, y_true: np.ndarray, y_pred: np.ndarray, y_proba: np.ndarray) -> dict:
-        n_classes = y_proba.shape[1] if y_proba.ndim > 1 else 1
-        is_multiclass = n_classes > 2
 
-        results = {
-            "accuracy": float(accuracy_score(y_true, y_pred)),
-            "precision_macro": float(precision_score(y_true, y_pred, average="macro", zero_division=0)),
-            "recall_macro": float(recall_score(y_true, y_pred, average="macro", zero_division=0)),
-            "f1_macro": float(f1_score(y_true, y_pred, average="macro", zero_division=0)),
-            "matthews_corrcoef": float(matthews_corrcoef(y_true, y_pred)),
-            "cohen_kappa": float(cohen_kappa_score(y_true, y_pred)),
-        }
-
-        if is_multiclass:
-            y_true_bin = label_binarize(y_true, classes=np.arange(n_classes))
-            brier = np.mean([
-                brier_score_loss(y_true_bin[:, i], y_proba[:, i])
-                for i in range(n_classes)
-            ])
-        else:
-            y_proba_bin = y_proba[:, 1] if y_proba.ndim > 1 else y_proba
-            brier = brier_score_loss(y_true, y_proba_bin)
-
-        results["brier_score"] = float(brier)
-        results["log_loss"] = float(log_loss(y_true, y_proba))
-
-        try:
-            if is_multiclass:
-                results["roc_auc"] = float(roc_auc_score(y_true, y_proba, multi_class="ovr", average="macro"))
-            else:
-                results["roc_auc"] = float(roc_auc_score(y_true, y_proba[:, 1] if y_proba.ndim > 1 else y_proba))
-        except Exception:
-            results["roc_auc"] = float("nan")
-
-        return results
-    
-    
-    
     def cross_validate_with_mlflow(
         self,
         X: Union[pd.DataFrame, np.ndarray],
